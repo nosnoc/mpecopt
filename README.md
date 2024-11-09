@@ -57,7 +57,7 @@ Note that this requires MATLAB R2024a or newer.
 4. Run the following example to test your installation:
 
 ```
-.../mpecopt/examples/gettings_started
+.../mpecopt/examples/getting_started
 ```
 
 ### Improving Performance 
