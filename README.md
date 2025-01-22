@@ -3,15 +3,14 @@
 ## Overview
 This repository contains a MATLAB implementation of MPECopt (Mathematical Programs with Equilibrium Constraints Optimizer).
 The MPEC is defined as follows:
-$$
+```math
 \begin{aligned}
 \underset{x \in \mathbb{R}^{n}}{\mathrm{min}} \quad & f(x) \\
 \textnormal{s.t.} \quad & c^{\mathrm{lb}} \leq c(x) \leq c^{\mathrm{ub}}, \\
 & x^{\mathrm{lb}} \leq x \leq x^{\mathrm{ub}}, \\
 & 0 \leq g(x) \perp h(x) \geq 0, \\
 \end{aligned}
-$$
-
+```
 MPECopt is fast and robust in computing stationary points of optimization problems subject to general nonlinear complementarity constraints. 
 
 ### Method Summary
@@ -58,7 +57,7 @@ Note that this requires MATLAB R2024a or newer.
 4. Run the following example to test your installation:
 
 ```
-.../mpecopt/examples/gettings_started
+.../mpecopt/examples/getting_started
 ```
 
 ### Improving Performance 
