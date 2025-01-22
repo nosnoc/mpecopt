@@ -8,8 +8,6 @@ qt_temp*
 *.bbl
 *.aux
 *.json
-*.nl.json
-*.nl
 *.pdf
 *.bib.bak
 *.orig
