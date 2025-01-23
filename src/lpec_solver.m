@@ -202,17 +202,17 @@ switch settings.lpec_solver
         sigma_k_lpec = settings.sigma0;
         lpec_homotopy = struct('x',d_lpec_sym,'f',f_lpec,'g', g,'G',G_lpec,'H',H_lpec);
         solver_initalization = struct('x0', x0,'lbx',lb,'ubx',ub,'lbg',lbg,'ubg',ubg);
-    % case "LCLP"
-    %     L = zeros([length(lpec.dims.ind_x1), lpec.dims.n_primal]);
-    %     R = zeros([length(lpec.dims.ind_x1), lpec.dims.n_primal]);
-    %     for ii=1:length(lpec.dims.ind_x1)
-    %         L(ii, lpec.dims.ind_x1(ii)) = 1;
-    %         R(ii, lpec.dims.ind_x2(ii)) = 1;
-    %     end
-    %     lb = [max([-lpec.rho_TR*ones(lpec.dims.n_primal-2*lpec.dims.n_comp,1), lpec.lb(lpec.dims.ind_x0)-lpec.x_lin(lpec.dims.ind_x0)],[],2);...
-    %         max([-lpec.rho_TR*ones(lpec.dims.n_comp,1), lpec.lb(lpec.dims.ind_x1)-lpec.x_lin(lpec.dims.ind_x1),-lpec.x_lin(lpec.dims.ind_x1)],[],2);...
-    %         max([-lpec.rho_TR*ones(lpec.dims.n_comp,1), lpec.lb(lpec.dims.ind_x2)-lpec.x_lin(lpec.dims.ind_x2),-lpec.x_lin(lpec.dims.ind_x2)],[],2)];
-    %     ub = min([lpec.rho_TR*ones(lpec.dims.n_primal), lpec.ub - lpec.x_lin],[],2);
+    case "LCLP"
+        L = zeros([length(lpec.dims.ind_x1), lpec.dims.n_primal]);
+        R = zeros([length(lpec.dims.ind_x1), lpec.dims.n_primal]);
+        for ii=1:length(lpec.dims.ind_x1)
+            L(ii, lpec.dims.ind_x1(ii)) = 1;
+            R(ii, lpec.dims.ind_x2(ii)) = 1;
+        end
+        lb = [max([-lpec.rho_TR*ones(lpec.dims.n_primal-2*lpec.dims.n_comp,1), lpec.lb(lpec.dims.ind_x0)-lpec.x_lin(lpec.dims.ind_x0)],[],2);...
+            max([-lpec.rho_TR*ones(lpec.dims.n_comp,1), lpec.lb(lpec.dims.ind_x1)-lpec.x_lin(lpec.dims.ind_x1),-lpec.x_lin(lpec.dims.ind_x1)],[],2);...
+            max([-lpec.rho_TR*ones(lpec.dims.n_comp,1), lpec.lb(lpec.dims.ind_x2)-lpec.x_lin(lpec.dims.ind_x2),-lpec.x_lin(lpec.dims.ind_x2)],[],2)];
+        ub = min([lpec.rho_TR*ones(lpec.dims.n_primal), lpec.ub - lpec.x_lin],[],2);
 end
 
 %% Solve Problem
@@ -395,20 +395,20 @@ switch settings.lpec_solver
         stats.nodecount = 1;
         stats.cpu_time = cpu_total;
         stats.solver_message = solver_message;
-    % case "LCLP"
-    %     t_start_lclp = tic;
-    %     [x_opt, stats] = box_lpcc(lb, ub, lpec.f, L, R, lpec.A_eq, lpec.b_eq, lpec.A_ineq, lpec.b_ineq);
-    %     cpu_total = toc(t_start_lclp);
-    %     results.y_lpec = lpec.x_lin(lpec.dims.ind_x1)+x_opt(lpec.dims.ind_x1)>lpec.x_lin(lpec.dims.ind_x2)+x_opt(lpec.dims.ind_x2);
-    %     results.f_opt = stats.f_opt;
-    %     results.d_lpec = x_opt;
-    %     stats.cpu_time = cpu_total;
-    %     stats.lpec_solution_exists = stats.success;
-    %     stats.nodecount = 1;
-    %     if ~stats.success
-    %         stats.solver_message = "FAILED";
-    %     else
-    %         stats.solver_message = "OPTIMAL";
-    %     end
+    case "LCLP"
+        t_start_lclp = tic;
+        [x_opt, stats] = box_lpcc(lb, ub, lpec.f, L, R, lpec.A_eq, lpec.b_eq, lpec.A_ineq, lpec.b_ineq);
+        cpu_total = toc(t_start_lclp);
+        results.y_lpec = lpec.x_lin(lpec.dims.ind_x1)+x_opt(lpec.dims.ind_x1)>lpec.x_lin(lpec.dims.ind_x2)+x_opt(lpec.dims.ind_x2);
+        results.f_opt = stats.f_opt;
+        results.d_lpec = x_opt;
+        stats.cpu_time = cpu_total;
+        stats.lpec_solution_exists = stats.success;
+        stats.nodecount = 1;
+        if ~stats.success
+            stats.solver_message = "FAILED";
+        else
+            stats.solver_message = "OPTIMAL";
+        end
 end
 end

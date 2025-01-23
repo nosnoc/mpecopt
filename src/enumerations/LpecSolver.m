@@ -8,7 +8,6 @@ classdef LpecSolver
         Ell_1 % use scholtes solver 
         Ell_inf % use scholtes solver/costum implement inside lpec not used;  
         Nlp % solve with IPOPT directly
-        % LCLP
     end   
 end
 

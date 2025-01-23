@@ -544,7 +544,7 @@ if settings.compute_tnlp_stationary_point && success && settings.lift_complement
         if settings.verbose_solver
             fprintf('%d \t %2.2e\t %2.2e\t  %2.2e\t  %2.2e\t %d \t\t %2.2e\t \t\t  %s  \n',ii,f_tnlp,comp_res_tnlp,inf_pr_tnlp,inf_du_tnlp,stats.iter_count,0,(stats.return_status));
         end
-        fprintf('\t\t ||x_tnlp - x_k|| = %2.2e, |f_tnlp-f_k| = %2.2e \n', norm(x_tnlp-x_k,inf),abs(f_tnlp-f_k))
+        % fprintf('\t\t ||x_tnlp - x_k|| = %2.2e, |f_tnlp-f_k| = %2.2e \n', norm(x_tnlp-x_k,inf),abs(f_tnlp-f_k))
         if norm(x_tnlp-x_k,inf) <= 1e-6 || abs(f_tnlp-f_k)/abs(f_k) <= 1e-3 || ii == N_TNLP
             [multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_tnlp,lambda_x_tnlp,dims,settings);
             n_biactive = sum(active_set_estimate_k.I_00);

@@ -16,7 +16,7 @@ MPECopt is fast and robust in computing stationary points of optimization proble
 ### Method Summary
 This method globally converges to B-stationary points of mathematical programs with equilibrium constraints (MPECs) within a finite number of iterations. 
 B-stationarity ensures no feasible first-order direction improves the objective, certified by solving linear programs with equilibrium constraints (LPECs). 
-In standard nonlinear optimization, B-stationarity is equivalent to a KKT point. Most existing methods cannot guarantee convergence to such points. 
+In standard nonlinear optimization, B-stationarity is equivalent to a KKT point. Most existing methods MPEC cannot guarantee convergence to such points. 
 MPECopt does not suffer from this drawback and is at the same time faster and more robust than other methods.
 All implementation details, a convergence proof, and extensive benchmarks can be found in the MPECopt paper.
 
@@ -86,11 +86,11 @@ Results on this benchmark are reported in the MPECopt paper.
 If you use this code or refer to the method in your research, please use the following BibTeX entry:
 
 ```bibtex
-@article{Nurkanovic2024e, 
+@article{Nurkanovic2025, 
   title={[A Globally Convergent Method for Computing B-stationary Points of Mathematical Programs with Equilibrium Constraints},
   author={Nurkanovi{\'c}, Armin and Leyffer, Sven}, 
   journal={arXiv preprint },
-  year={2024}
+  year={2025}
 }
 ```
 
