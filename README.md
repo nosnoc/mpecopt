@@ -50,7 +50,7 @@ savepath
 
 3. Default LPEC Solver Setup:
 
-The default MILP solver for the LPECs is [HiGHS](https://highs.dev/) solver called via [intlinprog](https://de.mathworks.com/help/optim/ug/intlinprog.html) in MATLAB.
+The default MILP solver for the LPECs is [HiGHS](https://highs.dev/) solver called via [intlinprog](https://de.mathworks.com/help/optim/ug/intlinprog.html) in MATLAB (by setting .lpec_solver = "Highs") or via CasADi's conic function (by setting .lpec_solver = "Highs_casadi").
 Note that this requires MATLAB R2024a or newer.
 
 

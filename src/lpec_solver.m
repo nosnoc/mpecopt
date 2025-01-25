@@ -159,6 +159,24 @@ switch settings.lpec_solver
         else
             model.Algorithm = 'legacy';
         end
+    case "Highs_casadi"
+
+        A_highs = sparse([[lpec.A_eq, zeros(lpec.dims.n_eq, lpec.dims.n_auxiliary)];...
+            [lpec.A_ineq,zeros(lpec.dims.n_ineq, lpec.dims.n_auxiliary)];...
+            lpec.A_lpec]);
+        lbA_highs = [-lpec.b_eq; -lpec.b_ineq; lpec.b_lpec];
+        ubA_highs = [-lpec.b_eq; inf(lpec.dims.n_ineq+2*lpec.dims.n_auxiliary,1)];
+        c_highs = f_lpec;
+        discrete = lpec.vtype;
+
+        lp.a = DM(A_highs).sparsity();
+        highs_opts = struct;
+        highs_opts.discrete = lpec.vtype_num;
+        highs_opts.highs.log_to_console = false;
+        %highs_opts.highs.simplex_strategy = 4;
+        %highs_opts.error_on_fail = false;
+        lpsol = conic('lp', 'highs', lp, highs_opts);
+
     case "Projected_Gradient"
         % preparation - project into feasible set;
         x_lin_0 = lpec.x_lin(lpec.dims.ind_x0);%
@@ -292,6 +310,36 @@ switch settings.lpec_solver
         end
         stats.solver_message_extended = output.message;
         stats.cpu_time = cpu_time;
+    case "Highs_casadi"
+        tic
+        try
+            r = lpsol('g', c_highs, 'a', A_highs, 'lbx', lb, 'ubx', ub, 'lba', lbA_highs, 'uba', ubA_highs);
+            highs_success = strcmp(lpsol.stats.return_status, 'Optimal');
+        catch
+            highs_success  = false;
+        end
+        cpu_time = toc;
+
+
+        if highs_success
+            x = full(r.x);
+            results.d_lpec = x(1:lpec.dims.n_primal);
+            results.y_lpec = x(end-lpec.dims.n_auxiliary+1:end);
+            results.f_opt = full(r.cost);
+            stats.lpec_solution_exists = true;
+
+            stats.success = highs_success;
+        else
+            results.d_lpec = lpec.d_lpec*nan;
+            results.y_lpec = lpec.y_lpec*nan;
+            results.f_opt = nan;
+
+            stats.lpec_solution_exists = false;
+        end
+        stats.nodecount = lpsol.stats.n_call_solver;
+        % stats.cpu_time =  lpsol.stats.t_wall_solver;
+        stats.cpu_time  = cpu_time;
+        stats.solver_message =  lpsol.stats.unified_return_status;
     case {'Reg','Ell_1','Ell_inf','Nlp'}
         % reg
         settings_homotopy = settings.homotopy_solver_settings;

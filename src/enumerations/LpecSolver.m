@@ -1,7 +1,8 @@
 classdef LpecSolver
     enumeration
         Gurobi
-        Highs
+        Highs % HiGHS solver solved via matlab's intlinprog function 
+        Highs_casadi % HiGHS solver solved via casadi's conic function 
         Matlab
         Projected_Gradient  %cf. Kirches 2022 % only if g = []; and G and H subvectors of x
         Reg % use scholtes Reg solver 
