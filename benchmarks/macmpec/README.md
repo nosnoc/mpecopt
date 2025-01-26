@@ -6,6 +6,7 @@
 The *.json files should be in benchmark\macmpec\macMPEC
 2.  
 a) To load an solve a single problem from the benchmark run `solve_single_macmpec_problem.m`
+
 b) To solve the whole problem set run `run_macmpec_experiments_all.m` 
 
 ##  Credits
