@@ -64,13 +64,13 @@ if settings.lift_complementarities_full
 else
     % lifting with only those that are not scaler
     % define lift vairables
-    [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(G,x);
-    n_lift_x1 = length(ind_nonscalar);
+    [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x);
+    n_lift_x1 = length(ind_nonscalar_x1);
     if n_lift_x1 == 0
         try x.jacobian(G_copy);
         catch
             n_lift_x1 = length(G_copy);
-            ind_nonscalar = 1:n_lift_x1;
+            ind_nonscalar_x1 = 1:n_lift_x1;
             ind_scalar = [];
         end
     end
@@ -81,14 +81,14 @@ else
         % x1 = [x(ind_scalar);x1_lift];
         % update x and init guess
         x = [x;x1_lift];
-        x_k = [x_k;G_eval(ind_nonscalar)];
+        x_k = [x_k;G_eval(ind_nonscalar_x1)];
         % lift
-        g = [g;x1_lift-G(ind_nonscalar)];
+        g = [g;x1_lift-G(ind_nonscalar_x1)];
         lbg = [lbg;0*ones(n_lift_x1 ,1)];
         ubg = [ubg;0*ones(n_lift_x1 ,1)];
 
         x1 = G_copy;
-        x1(ind_nonscalar) = x1_lift;
+        x1(ind_nonscalar_x1) = x1_lift;
     else
         x1 = G;
     end
@@ -108,8 +108,8 @@ if settings.lift_complementarities_full
     ubg = [ubg;0*ones(n_comp,1)];
 else
     % lifting with only those that are not scaler
-    [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(H,x);
-    n_lift_x2 = length(ind_nonscalar);
+    [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
+    n_lift_x2 = length(ind_nonscalar_x2);
     if n_lift_x2 == 0
         try x.jacobian(H_copy);
         catch
@@ -125,14 +125,14 @@ else
         % x2 = [x(ind_scalar);x2_lift];
         % update x and init guess
         x = [x;x2_lift];
-        x_k = [x_k;H_eval(ind_nonscalar)];
+        x_k = [x_k;H_eval(ind_nonscalar_x2)];
         % lift
-        g = [g;x2_lift-H(ind_nonscalar)];
+        g = [g;x2_lift-H(ind_nonscalar_x2)];
         lbg = [lbg;0*ones(n_lift_x2 ,1)];
         ubg = [ubg;0*ones(n_lift_x2 ,1)];
 
         x2 = H_copy;
-        x2(ind_nonscalar) = x2_lift;
+        x2(ind_nonscalar_x2) = x2_lift;
     else
         x2 = H;
     end
@@ -230,6 +230,8 @@ mpec_casadi.g_eq_fun =  Function('g_eq_fun',{x,p},{g_eq});
 mpec_casadi.g_ineq_ub_fun = Function('g_ineq_ub_fun',{x,p},{g_ineq_ub});
 mpec_casadi.g_ineq_lb_fun = Function('g_ineq_lb_fun',{x,p},{g_ineq_lb});
 mpec_casadi.g_ineq_fun = Function('g_ineq_lb_fun',{x,p},{g_ineq});
+mpec_casadi.G_fun = G_fun;
+mpec_casadi.H_fun = H_fun;
 % First order (Gradients and Jacobian)
 mpec_casadi.nabla_f_fun = Function('nabla_f_fun',{x,p},{nabla_f});
 mpec_casadi.nabla_g_fun = Function('nabla_g_fun',{x,p},{nabla_g});
@@ -281,6 +283,8 @@ dims.n_comp = n_comp;
 dims.n_eq = n_eq;
 dims.n_ineq = n_ineq;
 dims.n_primal_non_lifted = n_primal_non_lifted;
+dims.n_lift_x1 = n_lift_x1;
+dims.n_lift_x2 = n_lift_x2;
 dims.n_auxiliary = dims.n_comp; % number of binary variables in LPEC
 
 % index sets of general constraints
@@ -288,6 +292,8 @@ dims.ind_g_eq = ind_g_eq;
 dims.ind_g_ineq = ind_g_ineq;
 dims.ind_g_ineq_lb = ind_g_ineq_lb;
 dims.ind_g_ineq_ub = ind_g_ineq_lb; % if the last two have same indicies then it is a two sided ineq;
+dims.ind_nonscalar_x1 = ind_nonscalar_x1;
+dims.ind_nonscalar_x2 = ind_nonscalar_x2;
 
 %%  Main piece NLP solver (BNLP or TNLP)
 t_generate_nlp_solvers = tic;

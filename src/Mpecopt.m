@@ -31,13 +31,10 @@ classdef Mpecopt < handle
                 solver_initialization = []
             end
             %% Get data
-            if isempty(solver_initialization)
-                solver_initialization = obj.solver_initialization;
-            else
-                warning("solver initialization passed, but not processed")
-                % TODO(@anton) separate initialization update
-                obj.solver_initialization = solver_initialization;
+            if ~isempty(solver_initialization)
+                obj.process_solver_initialization(solver_initialization);
             end
+            solver_initialization = obj.solver_initialization;
             mpec = obj.mpec;
             settings = obj.settings;
             mpec = obj.mpec;
@@ -658,6 +655,51 @@ classdef Mpecopt < handle
 
             %% update info
             obj.stats = stats;
+        end
+    end
+
+    methods(Access=private)
+        function process_solver_initialization(obj, solver_initialization)
+            settings = obj.settings;
+            G_fun = obj.mpec_casadi.G_fun;
+            H_fun = obj.mpec_casadi.H_fun;
+            if settings.initial_comp_all_zero
+                G_eval = zeros(obj.dims.n_comp,1);
+                H_eval = zeros(obj.dims.n_comp,1);
+            else
+                G_eval = full(obj.mpec_casadi.G_fun(solver_initialization.x0, solver_initialization.p0));
+                H_eval = full(obj.mpec_casadi.H_fun(solver_initialization.x0, solver_initialization.p0));
+            end
+
+            if settings.lift_complementarities_full
+                solver_initialization.lbx = [solver_initialization.lbx;0*ones(obj.dims.n_comp,1)];
+                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(obj.dims.n_comp,1)];
+                solver_initialization.lbg = [solver_initialization.lbg;0*ones(obj.dims.n_comp,1)];
+                solver_initialization.ubg = [solver_initialization.ubg;0*ones(obj.dims.n_comp,1)];
+                solver_initialization.x0 = [solver_initialization.x0;G_eval];
+            else
+                solver_initialization.lbx = [solver_initialization.lbx;0*ones(obj.dims.n_lift_x1,1)];
+                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(obj.dims.n_lift_x1 ,1)];
+                solver_initialization.lbg = [solver_initialization.lbg;0*ones(obj.dims.n_lift_x1 ,1)];
+                solver_initialization.ubg = [solver_initialization.ubg;0*ones(obj.dims.n_lift_x1 ,1)];
+                solver_initialization.x0 = [solver_initialization.x0;G_eval(obj.dims.ind_nonscalar_x1)];
+            end
+
+            if settings.lift_complementarities_full
+                solver_initialization.lbx = [solver_initialization.lbx;0*ones(obj.dims.n_comp,1)];
+                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(obj.dims.n_comp,1)];
+                solver_initialization.lbg = [solver_initialization.lbg;0*ones(obj.dims.n_comp,1)];
+                solver_initialization.ubg = [solver_initialization.ubg;0*ones(obj.dims.n_comp,1)];
+                solver_initialization.x0 = [solver_initialization.x0;H_eval];
+            else
+                solver_initialization.lbx = [solver_initialization.lbx;0*ones(obj.dims.n_lift_x2,1)];
+                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(obj.dims.n_lift_x2 ,1)];
+                solver_initialization.lbg = [solver_initialization.lbg;0*ones(obj.dims.n_lift_x2 ,1)];
+                solver_initialization.ubg = [solver_initialization.ubg;0*ones(obj.dims.n_lift_x2 ,1)];
+                solver_initialization.x0 = [solver_initialization.x0;H_eval(obj.dims.ind_nonscalar_x2)];
+            end
+
+            obj.solver_initialization = solver_initialization;
         end
     end
 end
