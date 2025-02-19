@@ -34,7 +34,7 @@ classdef MPECOptimizerOptions < handle
         % ----- Phase I Settings -----
         initial_comp_all_zero(1,1) logical = false; % x1^0 = 0, x2^0 =0
         stop_if_nlp_infeasible (1,1) logical = true; % if an relaxed NLP is infeasible, declare the MPEC locally infeasible
-        initalization_strategy (1,1) InitalizationStrategy = InitalizationStrategy.RelaxAndProject;
+        initialization_strategy (1,1) InitializationStrategy = InitializationStrategy.RelaxAndProject;
         max_recovery_iters (1,1) double {mustBeReal, mustBeInteger} = 12; % If the current BNLP is infeasible, try to solve a tighet relaxation of the MPEC for a better feasible BNLP guess;
         bnlp_projection_strategy (1,1) BNLPProjectionStrategy = BNLPProjectionStrategy.LPEC; % chose how to project x_k(tau) onto complementarity set
         project_guess_to_bounds (1,1) logical = false; % project point to comps and simple bounds (might be still infeasible for general constraints)
