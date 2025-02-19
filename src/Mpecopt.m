@@ -11,13 +11,18 @@ classdef Mpecopt < handle
 
     methods
         function obj = Mpecopt(mpec, solver_initialization, settings)
+            t_prepare_mpec = tic;
             obj.settings = settings;
             obj.mpec = mpec;
             [mpec_casadi, dims, solver_initialization, stats] =  create_mpec_functions(mpec,solver_initialization,settings);
             obj.mpec_casadi = mpec_casadi;
             obj.solver_initialization = solver_initialization;
+            obj.lpec_casadi = create_lpec_functions(mpec_casadi,dims,settings,solver_initialization);
             obj.dims = dims;
             obj.stats = stats;
+            
+            cpu_time_prepare_mpec = toc(t_prepare_mpec);
+            stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
         end
 
         function [solution,stats] = solve(obj, solver_initialization)
@@ -37,9 +42,10 @@ classdef Mpecopt < handle
             settings = obj.settings;
             mpec = obj.mpec;
             mpec_casadi = obj.mpec_casadi;
-            lpec_casadi = obj.lpec.casadi;
+            lpec_casadi = obj.lpec_casadi;
             dims = obj.dims;
             stats = obj.stats;
+            
             
             %% Ininitialization
             k = 1;
@@ -85,13 +91,12 @@ classdef Mpecopt < handle
             if settings.plot_mpec_multipliers
                 figure;     % TODO: add figure handle that is passed to the multipl function.
             end
-            cpu_time_prepare_mpec = toc(t_prepare_mpec);
 
             % ------------------ Prepare homotopy solver for Phase I -----------------------------
             if strcmp(settings.initialization_strategy,"RelaxAndProject")
                 t_generate_nlp_solvers = tic;
                 % TODO : input just mpec_casadi and solver_initialization
-                [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi.f,mpec_casadi.g,mpec_casadi.x,mpec_casadi.x1,mpec_casadi.x2,mpec_casadi.p,lbx,ubx,lbg,ubg,p0,x_k,settings,dims);
+                [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi.f,mpec_casadi.g,mpec_casadi.x,mpec_casadi.x1,mpec_casadi.x2,mpec_casadi.p,solver_initialization.lbx,solver_initialization.ubx,solver_initialization.lbg,solver_initialization.ubg,solver_initialization.p0,x_k,settings,dims);
                 stats.cpu_time_generate_nlp_solvers = stats.cpu_time_generate_nlp_solvers+toc(t_generate_nlp_solvers);
             end
 
@@ -115,9 +120,9 @@ classdef Mpecopt < handle
                 print_phase_i();
                 print_iter_header();
             end
-            h_comp_ii = full(mpec_casadi.h_comp_fun(x_k(1:dims.n_primal),p0));
-            h_std_ii = full(mpec_casadi.h_std_fun(x_k(1:dims.n_primal),p0));
-            f_opt_ii = full(mpec_casadi.f_fun(x_k(1:dims.n_primal),p0));
+            h_comp_ii = full(mpec_casadi.h_comp_fun(x_k(1:dims.n_primal),solver_initialization.p0));
+            h_std_ii = full(mpec_casadi.h_std_fun(x_k(1:dims.n_primal),solver_initialization.p0));
+            f_opt_ii = full(mpec_casadi.f_fun(x_k(1:dims.n_primal),solver_initialization.p0));
             print_iter_stats('I',0,f_opt_ii,h_std_ii,h_comp_ii,'/',0,'Initial guess',0,0,0,1)
 
             t_phase_i_start = tic;
@@ -143,7 +148,7 @@ classdef Mpecopt < handle
                         if solve_lpec
                             % prepare and solve lpec; 
                             t_lpec_preparation_iter = tic;
-                            lpec = create_lpec_subproblem(x_k,p0,rho_TR_k_l,lpec_casadi,dims,settings,settings.tol_active);
+                            lpec = create_lpec_subproblem(x_k,solver_initialization.p0,rho_TR_k_l,lpec_casadi,dims,settings,settings.tol_active);
                             stats.iter.cpu_time_lpec_preparation_iter = [stats.iter.cpu_time_lpec_preparation_iter;toc(t_lpec_preparation_iter)];
                             %  Initial guess and TR for the LPEC
                             y_lpec_k_previous = y_lpec_k_l; % to keep track of active set chnages
@@ -174,8 +179,8 @@ classdef Mpecopt < handle
                             stats.f_lpec = f_lin_opt_k_l; 
                             x_trail_lpec = x_k + d_lpec_k_l;
                             % Infeasibility check
-                            h_comp_lpec_k_l = full(mpec_casadi.h_comp_fun(x_trail_lpec,p0));
-                            h_std_lpec_k_l = full(mpec_casadi.h_std_fun(x_trail_lpec,p0));
+                            h_comp_lpec_k_l = full(mpec_casadi.h_comp_fun(x_trail_lpec,solver_initialization.p0));
+                            h_std_lpec_k_l = full(mpec_casadi.h_std_fun(x_trail_lpec,solver_initialization.p0));
                             if settings.verbose_solver
                                 print_iter_stats(1,ii,f_lin_opt_k_l,h_std_lpec_k_l,h_comp_lpec_k_l,'LPEC',stats_lpec.nodecount,stats_lpec.solver_message,lpec.rho_TR,norm(d_lpec_k_l),stats_lpec.cpu_time,' ')
                             end
@@ -194,8 +199,8 @@ classdef Mpecopt < handle
                             %
                             if lpec_solution_exists
                                 % --------------------------- Check if B-stationary point found --------------------------
-                                h_total_k = full(mpec_casadi.h_total_fun(x_k,p0));
-                                nabla_f_k = full(mpec_casadi.nabla_f_fun(x_k,p0));
+                                h_total_k = full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0));
+                                nabla_f_k = full(mpec_casadi.nabla_f_fun(x_k,solver_initialization.p0));
                                 if (h_total_k <= settings.tol) && ((abs(f_lin_opt_k_l) <= settings.tol_B_stationarity || norm(nabla_f_k) <= settings.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
                                     if settings.reset_lpec_objective
                                         d_lpec_k_l = d_lpec_k_l*0; % if the current point is feasible, and the objective is zero, then d = 0 is also a solution of the lpec (occurs if a solution is not on the verties of the lp)
@@ -247,30 +252,30 @@ classdef Mpecopt < handle
                         active_set_guess_exists = true;
                     end
                     % solve BNLP/NLP
-                    h_total_k = full(mpec_casadi.h_total_fun(x_k,p0));
+                    h_total_k = full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0));
                     if h_total_k <= settings.tol_feasibility && ii>1
                         feasible_bnlp_found = true;
                     end
 
                     if active_set_guess_exists && ~feasible_bnlp_found
-                        lbx_bnlp_k = lbx;
-                        ubx_bnlp_k = ubx;
+                        lbx_bnlp_k = solver_initialization.lbx;
+                        ubx_bnlp_k = solver_initialization.ubx;
                         ubx_bnlp_k(dims.ind_x1(I_0_plus)) = 0;
                         ubx_bnlp_k(dims.ind_x2(I_plus_0)) = 0;
                         t_presolve_nlp_iter = tic;
-                        results_nlp = mpec_casadi.solver('x0',x_k,'p',p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',lbg,'ubg',ubg);
+                        results_nlp = mpec_casadi.solver('x0',x_k,'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg);
                         cpu_time_bnlp_ii = toc(t_presolve_nlp_iter);
                         stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter; cpu_time_bnlp_ii];
                         x_k = full(results_nlp.x);
                         lambda_x_k  = full(results_nlp.lam_x);
                         stats_nlp = mpec_casadi.solver.stats(); nlp_iters_k = stats_nlp.iter_count; stats.n_nlp_total = stats.n_nlp_total + 1;
-                        h_comp_k = full(mpec_casadi.h_comp_fun(x_k,p0));
-                        h_std_k = full(mpec_casadi.h_std_fun(x_k,p0));
+                        h_comp_k = full(mpec_casadi.h_comp_fun(x_k,solver_initialization.p0));
+                        h_std_k = full(mpec_casadi.h_std_fun(x_k,solver_initialization.p0));
                         f_opt_k = full(results_nlp.f);
                         if settings.verbose_solver
                             print_iter_stats(1,ii,f_opt_k,h_std_k,h_comp_k,'BNLP',nlp_iters_k,stats_nlp.return_status,rho_TR_k_l,norm(x_k_init(1:dims.n_primal)-x_k),cpu_time_bnlp_ii ,1)
                         end
-                        if full(mpec_casadi.h_total_fun(x_k,p0)) <= settings.tol_feasibility
+                        if full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= settings.tol_feasibility
                             % if ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'})
                             feasible_bnlp_found = true;
                         else
@@ -292,9 +297,9 @@ classdef Mpecopt < handle
                         % Extract results and compute objective, infeasibility ect.
                         x_k = full(results_nlp.x);
                         lambda_x_k = full(results_nlp.lam_x);
-                        h_comp_ii = full(mpec_casadi.h_comp_fun(x_k(1:dims.n_primal),p0));
-                        h_std_ii= full(mpec_casadi.h_std_fun(x_k(1:dims.n_primal),p0));
-                        f_opt_ii = full(mpec_casadi.f_fun(x_k(1:dims.n_primal),p0));
+                        h_comp_ii = full(mpec_casadi.h_comp_fun(x_k(1:dims.n_primal),solver_initialization.p0));
+                        h_std_ii= full(mpec_casadi.h_std_fun(x_k(1:dims.n_primal),solver_initialization.p0));
+                        f_opt_ii = full(mpec_casadi.f_fun(x_k(1:dims.n_primal),solver_initialization.p0));
                         stats.iter.X_outer = [stats.iter.X_outer, x_k(1:dims.n_primal)];
                         if settings.verbose_solver
                             if strcmp(settings.relax_and_project_homotopy_parameter_steering,"Direct")
@@ -326,7 +331,7 @@ classdef Mpecopt < handle
               case {'FeasibilityEllInfGeneral','FeasibilityEll1General'}
                 n_g = length(mpec_casadi.g);
                 % chekc if inital point already feasible
-                h_total_k = full(mpec_casadi.h_total_fun(x_k,p0));
+                h_total_k = full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0));
                 if h_total_k <= settings.tol_feasibility
                     % TODO: add this maybe before any possible Phase I method;
                     stats.feasible_bnlp_found = true;
@@ -418,7 +423,7 @@ classdef Mpecopt < handle
                     else
                         stats.feasible_bnlp_found = true;
                         stats.success_phase_i = true;
-                        x_k = project_to_bounds(x_k,lbx,ubx,dims);
+                        x_k = project_to_bounds(x_k,solver_initialization.lbx,solver_initialization.ubx,dims);
                         fprintf('\n MPECopt: MPEC has only complementarity and bound constraints, feasible point found by projection to bounds.\n')
                     end
                 end
@@ -429,19 +434,19 @@ classdef Mpecopt < handle
                 while (ii <= settings.max_recovery_iters) && ~stats.problem_infeasible
                     I_0_plus = boolean(round(rand(dims.n_comp,1)));
                     I_plus_0 = ~I_0_plus;
-                    lbx_bnlp_k = lbx;
-                    ubx_bnlp_k = ubx;
+                    lbx_bnlp_k = solver_initialization.lbx;
+                    ubx_bnlp_k = solver_initialization.ubx;
                     ubx_bnlp_k(dims.ind_x1(I_0_plus)) = 0;
                     ubx_bnlp_k(dims.ind_x2(I_plus_0)) = 0;
                     % solve BNLP/NLP
                     x_k_init = x_k;
                     t_presolve_nlp_iter = tic;
-                    results_nlp = mpec_casadi.solver('x0',x_k,'p',p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',lbg,'ubg',ubg);
+                    results_nlp = mpec_casadi.solver('x0',x_k,'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg);
                     cpu_time_bnlp_k = toc(t_presolve_nlp_iter);
                     stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_bnlp_k ];
                     x_k = full(results_nlp.x); lambda_x_k  = full(results_nlp.lam_x);
                     stats_nlp = mpec_casadi.solver.stats(); nlp_iters_k = stats_nlp.iter_count; stats.n_nlp_total = stats.n_nlp_total + 1;
-                    h_comp_k = full(mpec_casadi.h_comp_fun(x_k,p0)); h_std_k = full(mpec_casadi.h_std_fun(x_k,p0)); f_opt_k = full(results_nlp.f);
+                    h_comp_k = full(mpec_casadi.h_comp_fun(x_k,solver_initialization.p0)); h_std_k = full(mpec_casadi.h_std_fun(x_k,solver_initialization.p0)); f_opt_k = full(results_nlp.f);
                     if settings.verbose_solver
                         print_iter_stats(1,ii,f_opt_k,h_std_k,h_comp_k,'BNLP',nlp_iters_k,stats_nlp.return_status,nan,norm(x_k_init-x_k),cpu_time_bnlp_k,1)
                     end
@@ -455,17 +460,17 @@ classdef Mpecopt < handle
                 end
                 % TODO: IF INFEASIBLE QUIT
               case 'AllBiactive'
-                lbx_bnlp_k = lbx; ubx_bnlp_k = ubx; x_k_init = x_k;
+                lbx_bnlp_k = solver_initialization.lbx; ubx_bnlp_k = solver_initialization.ubx; x_k_init = x_k;
                 lbx_bnlp_k(dims.ind_x1) = 0; ubx_bnlp_k(dims.ind_x1) = 0; lbx_bnlp_k(dims.ind_x2) = 0; ubx_bnlp_k(dims.ind_x2) = 0;
                 t_presolve_nlp_iter = tic;
-                results_nlp = mpec_casadi.solver('x0', x_k, 'p',p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',lbg,'ubg',ubg); % solve BNLP/NLP
+                results_nlp = mpec_casadi.solver('x0', x_k, 'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg); % solve BNLP/NLP
                 cpu_time_bnlp_k = toc(t_presolve_nlp_iter);
                 stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_bnlp_k];
                 x_k = full(results_nlp.x);
                 lambda_x_k  = full(results_nlp.lam_x);
                 stats_nlp = mpec_casadi.solver.stats();
                 nlp_iters_k = stats_nlp.iter_count;
-                h_comp_k = full(mpec_casadi.h_comp_fun(x_k,p0)); h_std_k = full(mpec_casadi.h_std_fun(x_k,p0)); f_opt_k = full(results_nlp.f);
+                h_comp_k = full(mpec_casadi.h_comp_fun(x_k,solver_initialization.p0)); h_std_k = full(mpec_casadi.h_std_fun(x_k,solver_initialization.p0)); f_opt_k = full(results_nlp.f);
                 if settings.verbose_solver
                     print_iter_stats('BNLP',1,f_opt_k,h_std_k,h_comp_k,'NLP',nlp_iters_k,stats_nlp.return_status,nan,norm(x_k_init-x_k),cpu_time_bnlp_k,1)
                 end
@@ -475,27 +480,27 @@ classdef Mpecopt < handle
                 % TODO: IF INFEASIBLE QUIT
               case 'TakeInitialGuessDirectly'
                 if settings.project_guess_to_bounds
-                    x_k = project_to_bounds(x_k,lbx,ubx,dims);
+                    x_k = project_to_bounds(x_k,solver_initialization.lbx,solver_initialization.ubx,dims);
                 end
               case 'TakeInitialGuessActiveSet'
                 % Make active set guess from x_k and solve corresponding BNLP;
                 I_0_plus = x_k(dims.ind_x1)<=x_k(dims.ind_x2);
                 I_plus_0 = x_k(dims.ind_x1)>x_k(dims.ind_x2);
-                lbx_bnlp_k = lbx;
-                ubx_bnlp_k = ubx;
+                lbx_bnlp_k = solver_initialization.lbx;
+                ubx_bnlp_k = solver_initialization.ubx;
                 ubx_bnlp_k(dims.ind_x1(I_0_plus)) = 0;
                 ubx_bnlp_k(dims.ind_x2(I_plus_0)) = 0;
                 % solve BNLP/NLP
                 x_k_init = x_k;
                 t_presolve_nlp_iter = tic;
-                results_nlp = mpec_casadi.solver('x0',x_k,'p',p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',lbg,'ubg',ubg);
+                results_nlp = mpec_casadi.solver('x0',x_k,'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg);
                 cpu_time_bnlp_k = toc(t_presolve_nlp_iter);
                 stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_bnlp_k ];
                 x_k = full(results_nlp.x);
                 lambda_x_k  = full(results_nlp.lam_x);
                 stats_nlp = mpec_casadi.solver.stats();
                 nlp_iters_k = stats_nlp.iter_count;
-                h_comp_k = full(mpec_casadi.h_comp_fun(x_k,p0)); h_std_k = full(mpec_casadi.h_std_fun(x_k,p0)); f_opt_k = full(results_nlp.f);
+                h_comp_k = full(mpec_casadi.h_comp_fun(x_k,solver_initialization.p0)); h_std_k = full(mpec_casadi.h_std_fun(x_k,solver_initialization.p0)); f_opt_k = full(results_nlp.f);
                 if settings.verbose_solver
                     print_iter_stats(1,1,f_opt_k,h_std_k,h_comp_k,'BNLP',nlp_iters_k,stats_nlp.return_status,nan,norm(x_k_init-x_k),cpu_time_bnlp_k,1)
                 end
@@ -519,19 +524,19 @@ classdef Mpecopt < handle
                     I_0_plus = x_k(dims.ind_x1)<=x_k(dims.ind_x2);
                     I_plus_0 = x_k(dims.ind_x1)>x_k(dims.ind_x2);
                 end
-                lbx_bnlp_k = lbx;
-                ubx_bnlp_k = ubx;
+                lbx_bnlp_k = solver_initialization.lbx;
+                ubx_bnlp_k = solver_initialization.ubx;
                 ubx_bnlp_k(dims.ind_x1(I_0_plus)) = 0;
                 ubx_bnlp_k(dims.ind_x2(I_plus_0)) = 0;
                 % solve BNLP/NLP
                 x_k_init = x_k;
                 t_presolve_nlp_iter = tic;
-                results_nlp = solver('x0',x_k,'p',p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',lbg,'ubg',ubg);
+                results_nlp = solver('x0',x_k,'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg);
                 cpu_time_bnlp_k = toc(t_presolve_nlp_iter);
                 stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter; cpu_time_bnlp_k];
                 x_k = full(results_nlp.x); lambda_x_k  = full(results_nlp.lam_x);
                 stats_nlp = solver.stats(); nlp_iters_k = stats_nlp.iter_count; stats.n_nlp_total = stats.n_nlp_total + 1;
-                h_comp_k = full(h_comp_fun(x_k,p0)); h_std_k = full(h_std_fun(x_k,p0)); f_opt_k = full(results_nlp.f);
+                h_comp_k = full(h_comp_fun(x_k,solver_initialization.p0)); h_std_k = full(h_std_fun(x_k,solver_initialization.p0)); f_opt_k = full(results_nlp.f);
                 if settings.verbose_solver
                     print_iter_stats(1,1,f_opt_k,h_std_k,h_comp_k,'BNLP',nlp_iters_k,stats_nlp.return_status,nan,norm(x_k_init-x_k),cpu_time_bnlp_k,1)
                 end
@@ -540,7 +545,7 @@ classdef Mpecopt < handle
             end
             stats.rho_TR_final = rho_TR_k_l;
             %  ---- make sure feasible point is declared sucessful ---
-            if full(mpec_casadi.h_total_fun(x_k,p0)) <= settings.tol_feasibility
+            if full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= settings.tol_feasibility
                 stats.feasible_bnlp_found = true; stats.success_phase_i = true;
             else
                 stats.feasible_bnlp_found = false; stats.success_phase_i = false;
@@ -548,7 +553,7 @@ classdef Mpecopt < handle
             stats.phase_i_infeasibility_detected = ~stats.success_phase_i;
 
             % -------------------- Check is the BNLP solution S-stationary ------------------------------
-            h_total_phase_i  = full(mpec_casadi.h_total_fun(x_k,p0));   % infeasibility
+            h_total_phase_i  = full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0));   % infeasibility
 
             if stats.success_phase_i && settings.stop_if_S_stationary && ~stats.stopping_criterion_fullfiled && h_total_phase_i <= settings.tol_feasibility && ~(strcmp(settings.initialization_strategy,'FeasibilityEll1General') || strcmp(settings.initialization_strategy,'FeasibilityEllInfGeneral'))
                 active_set_estimate_k = find_active_sets(x_k, dims, settings.tol_active); % check is it S-stationary;
@@ -603,7 +608,7 @@ classdef Mpecopt < handle
                 print_phase_ii();
                 print_iter_header();
             end
-            [solution,stats] = mpecopt_phase_ii(mpec_casadi,lpec_casadi,dims,settings,solver_initalization,stats,phase_ii);
+            [solution,stats] = mpecopt_phase_ii(mpec_casadi,lpec_casadi,dims,settings,solver_initialization,stats,phase_ii);
 
             if  stats.solved_in_phase_i
                 stats.cpu_time_phase_ii = 1e-10;
@@ -615,7 +620,7 @@ classdef Mpecopt < handle
                 print_iter_summary(solution.f,stats.h_std,stats.comp_res,stats.solver_message,stats.multiplier_based_stationarity,stats.b_stationarity,stats.n_biactive,stats.f_lpec,stats.rho_TR_final);
                 fprintf('\n');
                 if settings.verbose_extended_summary
-                    print_iter_details(stats.n_nlp_total,stats.n_lpec_total,stats.iter.rho_TR_iter(end),cpu_time_prepare_mpec+cpu_time_generate_nlp_solvers,stats.cpu_time_total,stats.cpu_time_phase_i,stats.cpu_time_main_loop)
+                    print_iter_details(stats.n_nlp_total,stats.n_lpec_total,stats.iter.rho_TR_iter(end),stats.cpu_time_prepare_mpec+cpu_time_generate_nlp_solvers,stats.cpu_time_total,stats.cpu_time_phase_i,stats.cpu_time_main_loop)
                     try
                         fprintf('LPEC objective...............:\t %2.2e\n',results_lpec.f_opt);
                     catch
@@ -638,7 +643,6 @@ classdef Mpecopt < handle
             end
 
 
-            stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
             stats.cpu_time_lpec_preparation = sum(stats.iter.cpu_time_lpec_preparation_iter);
             stats.cpu_time_lpec_phase_i = sum(stats.iter.cpu_time_lpec_phase_i_iter);
             stats.cpu_time_lpec_phase_ii = sum(stats.iter.cpu_time_lpec_phase_ii_iter);
