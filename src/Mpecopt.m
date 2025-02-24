@@ -675,6 +675,7 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             import casadi.*;
             p = inputParser;
             addParameter(p, 'x0', []);
+            addParameter(p, 'y0', []);
             addParameter(p, 'lbx', []);
             addParameter(p, 'ubx', []);
             addParameter(p, 'lbg', []);
@@ -725,6 +726,9 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 obj.solver_initialization.lam_x0 = p.Results.lam_x0;
             else
                 obj.solver_initialization.lam_x0 = zeros(dims.n_x, 1);
+            end
+            if ~isempty(p.Results.y0)
+                obj.solver_initialization.y0 = p.Results.y0;
             end
             [solution,stats] = obj.solve(obj.solver_initialization);
             varargout{1} = solution;
