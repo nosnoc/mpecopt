@@ -939,10 +939,9 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                     x = mpec.w;
                 end
                 f = mpec.f;
-                g = mpec.g;
+                g = SX(mpec.g);
                 G = mpec.G;
                 H = mpec.H;
-
 
                 if isfield(mpec,'p')
                     p = mpec.p;

@@ -45,7 +45,7 @@ solver_settings.tol_B_stationarity = 1e-8;
 solver_settings.rho_TR_phase_ii_init = 1e-2;
 % solver_initalization.x0 = x0;
 
-solver = Mpecopt(mpec, solver_initalization, solver_settings);
+solver = Mpecopt(mpec, solver_settings);
 
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 w_opt_active_set = full(result_active_set.x);
