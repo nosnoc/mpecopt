@@ -501,13 +501,13 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 % stats.succes+p
 
               case 'TakeProvidedActiveSet'
-                if isfield('y0',solver_initialization)
-                    if isequal(length(y0),dims.n_comp)
+                if isfield(solver_initialization,'y0')
+                    if isequal(length(solver_initialization.y0),dims.n_comp)
                         y_lpec_k_l = solver_initialization.y0;
                         I_plus_0 = y_lpec_k_l ==1;
                         I_0_plus = y_lpec_k_l == 0;
                     else
-                        warning('\n TakeProvidedActiveSet: lenth of y0 is %d, but required is %d',length(solver_initialization.y0))
+                        warning('TakeProvidedActiveSet: lenth of y0 is %d, but required is %d',length(solver_initialization.y0))
                         I_0_plus = x_k(dims.ind_x1)<=x_k(dims.ind_x2);
                         I_plus_0 = x_k(dims.ind_x1)>x_k(dims.ind_x2);
                     end
@@ -523,12 +523,12 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 % solve BNLP/NLP
                 x_k_init = x_k;
                 t_presolve_nlp_iter = tic;
-                results_nlp = solver('x0',x_k,'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg);
+                results_nlp = mpec_casadi.solver('x0',x_k,'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg);
                 cpu_time_bnlp_k = toc(t_presolve_nlp_iter);
                 stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter; cpu_time_bnlp_k];
                 x_k = full(results_nlp.x); lambda_x_k  = full(results_nlp.lam_x);
-                stats_nlp = solver.stats(); nlp_iters_k = stats_nlp.iter_count; stats.n_nlp_total = stats.n_nlp_total + 1;
-                h_comp_k = full(h_comp_fun(x_k,solver_initialization.p0)); h_std_k = full(h_std_fun(x_k,solver_initialization.p0)); f_opt_k = full(results_nlp.f);
+                stats_nlp = mpec_casadi.solver.stats(); nlp_iters_k = stats_nlp.iter_count; stats.n_nlp_total = stats.n_nlp_total + 1;
+                h_comp_k = full(mpec_casadi.h_comp_fun(x_k,solver_initialization.p0)); h_std_k = full(mpec_casadi.h_std_fun(x_k,solver_initialization.p0)); f_opt_k = full(results_nlp.f);
                 if opts.verbose_solver
                     print_iter_stats(1,1,f_opt_k,h_std_k,h_comp_k,'BNLP',nlp_iters_k,stats_nlp.return_status,nan,norm(x_k_init-x_k),cpu_time_bnlp_k,1)
                 end
@@ -973,6 +973,7 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x);
                 n_lift_x1 = length(ind_nonscalar_x1);
                 if n_lift_x1 == 0
+                    % TODO(@anton) Figure out what this does.
                     try
                         x.jacobian(G_copy);
                     catch
@@ -1008,10 +1009,12 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
                 n_lift_x2 = length(ind_nonscalar_x2);
                 if n_lift_x2 == 0
-                    try x.jacobian(H_copy);
+                    % TODO(@anton) Figure out what this does.
+                    try
+                        x.jacobian(H_copy);
                     catch
                         n_lift_x2 = length(H_copy);
-                        ind_nonscalar = 1:n_lift_x2;
+                        ind_nonscalar_x2 = 1:n_lift_x2;
                         ind_scalar = [];
                     end
                 end
