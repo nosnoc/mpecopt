@@ -1,6 +1,6 @@
 clear all; clc; close all;
 import casadi.*
-%% Kirches 2022, example, origin is C stationary, (0,1) is the global optimum
+%% Kirches 2022, example, origin is M stationary, (0,1) is the global optimum
 
 x1 = SX.sym('x1');
 x2 = SX.sym('x2');
@@ -35,7 +35,7 @@ solver_initalization = struct('x0', x0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg,'
 settings = HomotopySolverOptions();
 [result_scholtes,stats_scholtes] = mpec_homotopy_solver(mpec,solver_initalization,settings);
 f_opt_scholtes = full(result_scholtes.f);
-w_opt_scholtes = full(result_scholtes.x);
+x_opt_scholtes = full(result_scholtes.x);
 
 % x0 = w_opt_scholtes;
 solver_settings = MPECOptimizerOptions();
@@ -46,9 +46,10 @@ solver_settings.rho_TR_phase_ii_init = 1e-2;
 % solver_initalization.x0 = x0;
 
 solver = Mpecopt(mpec, solver_settings);
-
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
-w_opt_active_set = full(result_active_set.x);
+
+
+x_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
 
 
@@ -58,5 +59,5 @@ fprintf('-----------------------------------------------------------------------
 fprintf('Scholtes \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_scholtes,stats_scholtes.comp_res,stats_scholtes.n_biactive,stats_scholtes.cpu_time_total,stats_scholtes.success,stats_scholtes.multiplier_based_stationarity)
 fprintf('Active Set \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_active_set,stats_active_set.comp_res,stats_active_set.n_biactive,stats_active_set.cpu_time_total,stats_active_set.success,stats_active_set.multiplier_based_stationarity)
 fprintf('\n');
-fprintf(' || w_scholtes - w_active_set || = %2.2e \n',norm(w_opt_scholtes-w_opt_active_set));
+fprintf(' || x_scholtes - x_active_set || = %2.2e \n',norm(x_opt_scholtes-x_opt_active_set));
 

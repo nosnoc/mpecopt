@@ -1,6 +1,6 @@
 clear all; clc; close all;
 import casadi.*
-%% Leyffer 2007, example 2, origin is M stationary, (0,1) and (1,0) are S-stationary
+%% Leyffer 2007, example 2, origin is C stationary, (0,1) and (1,0) are S-stationary
 x1 = SX.sym('x1');
 x2 = SX.sym('x2');
 x = [x1;x2];
@@ -34,16 +34,15 @@ f_opt_scholtes = full(result_scholtes.f);
 solver_settings = MPECOptimizerOptions();
 solver_settings.settings_lpec.lpec_solver = "Highs_casadi";
 solver_settings.initialization_strategy ="RelaxAndProject";
-solver_settings.initialization_strategy = "FeasibilityEll1General";
 solver_settings.relax_and_project_homotopy_parameter_steering = "Ell_inf";
-% solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = true;
-solver_settings.tol_B_stationarity = 1e-8;
 
 % solver_settings.initialization_strategy ="TakeProvidedActiveSet";
-% solver_initalization.y0 = [0];
+% solver_initalization.y0 = 0;
 
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+solver = Mpecopt(mpec, solver_settings);
+[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+
 w_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
 
