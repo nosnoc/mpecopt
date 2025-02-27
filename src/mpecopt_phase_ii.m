@@ -361,7 +361,7 @@ end
 % --------------- compute multiplier-based stationary points --------------
 multiplier_based_stationarity_debug = stats.multiplier_based_stationarity;
 if (stats.success || k==settings.max_iter) && settings.compute_tnlp_stationary_point && phase_ii
-    if ~strcmp(settings.piece_nlp_strategy,'TNLP')
+    % if ~strcmp(settings.piece_nlp_strategy,'TNLP')
         % resolve TNLP for correct multipliers
         lbx_bnlp_k = lbx; ubx_bnlp_k = ubx;  % reset bounds of bnlp.
         lbg_tnlp_k = lbg; ubg_tnlp_k = ubg;
@@ -374,13 +374,13 @@ if (stats.success || k==settings.max_iter) && settings.compute_tnlp_stationary_p
         ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
         ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
         settings.piece_nlp_strategy = initial_strategy;
+    % end
         t_nlp_start = tic;
         results_nlp = solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
         cpu_time_nlp_k_l = toc(t_nlp_start);
         x_k_multi = full(results_nlp.x);
         lambda_x_k = full(results_nlp.lam_x);
-    end
-    [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,settings);
+        [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,settings);
 end
 
 % Debug falure of stationary point computation
