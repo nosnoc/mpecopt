@@ -50,11 +50,6 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             x_trail_nlp = x_k;
             feasible_bnlp_found = false; % did phase i find a feasible bnlp?
 
-            % read all bounds
-            lbx = solver_initialization.lbx;
-            ubx = solver_initialization.ubx;
-            lbg = solver_initialization.lbg;
-            ubg = solver_initialization.ubg;
 
             rho_TR_k_l = opts.rho_TR_phase_i_init;
             % stats.iter.X_outer = x_k; % save all accepted steps;
@@ -335,7 +330,7 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                     % TODO: add this maybe before any possible Phase I method;
                     stats.feasible_bnlp_found = true;
                     stats.success_phase_i = true;
-                    x_k = project_to_bounds(x_k,lbx,ubx,dims);
+                    x_k = project_to_bounds(x_k,solver_initialization.lbx,solver_initialization.ubx,dims);
                     fprintf('\n MPECopt: initial guess already feasible. \n')
                 else
                     if n_g > 0
@@ -812,10 +807,7 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             end
 
             %% Split into equalites and inequalities
-            lbg = solver_initialization.lbg;
-            ubg = solver_initialization.ubg;
-            lbx = solver_initialization.lbx;
-            ubx = solver_initialization.ubx;
+            % TODO@Anton?: Get rid of this unfold?
             x = mpec_casadi.x;
             g = mpec_casadi.g;
             x0 = mpec_casadi.x0;
@@ -823,14 +815,14 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             x2 = mpec_casadi.x2;
             p = mpec_casadi.p;
             
-            ind_g_eq = find(lbg == ubg);
-            ind_g_ineq = find(lbg < ubg);
+            ind_g_eq = find(solver_initialization.lbg == solver_initialization.ubg);
+            ind_g_ineq = find(solver_initialization.lbg < solver_initialization.ubg);
 
-            ind_g_ineq_lb = find(lbg >- inf & lbg < ubg);
-            ind_g_ineq_ub = find(ubg < inf & lbg < ubg);
+            ind_g_ineq_lb = find(solver_initialization.lbg >- inf & solver_initialization.lbg < solver_initialization.ubg);
+            ind_g_ineq_ub = find(solver_initialization.ubg < inf & solver_initialization.lbg < solver_initialization.ubg);
 
-            ind_x_lb = find(lbx > -inf);
-            ind_x_ub =  find(ubx < inf);
+            ind_x_lb = find(solver_initialization.lbx > -inf);
+            ind_x_ub =  find(solver_initialization.ubx < inf);
 
             n_eq = length(ind_g_eq);
             n_g_ineq_ub = length(ind_g_ineq_ub);
@@ -841,10 +833,9 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
 
             lbx_reduced = lbx(ind_x_lb);
             ubx_reduced = ubx(ind_x_ub);
-            g_sym = mpec_casadi.g;
             % Generate casadi functions for objective and constraint function evaluations
             % Zero order
-            g_eq = g(ind_g_eq)-lbg(ind_g_eq);                                          % g_eq = g - g_lb = 0
+            g_eq = g(ind_g_eq)-solver_initialization.lbg(ind_g_eq);                    % g_eq = g - g_lb = 0
             g_ineq_ub = ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);                           % g_ineq_ub = g_ub - g >= 0
             g_ineq_lb = g(ind_g_ineq_lb)-lbg(ind_g_ineq_lb);                           % g_ineq_lb = g - g_lb >= 0
             g_ineq = [ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);...
@@ -871,8 +862,8 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             h_eq = max(abs(g_eq));
             h_ineq_ub = max(min(g_ineq_ub,0));
             h_ineq_lb = max(min(g_ineq_lb,0));
-            h_ubx = max(min(ubx-x,0));
-            h_lbx = max(min(x-lbx,0));
+            h_ubx = max(min(solver_initialization.ubx-x,0));
+            h_lbx = max(min(x-solver_initialization.lbx,0));
             % Summary
             h_std = max([h_eq;h_ineq_ub;h_ineq_lb;h_ubx;h_lbx]);
             if dims.n_comp > 0
