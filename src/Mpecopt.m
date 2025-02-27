@@ -117,7 +117,9 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             h_comp_ii = full(mpec_casadi.h_comp_fun(x_k(1:dims.n_primal),solver_initialization.p0));
             h_std_ii = full(mpec_casadi.h_std_fun(x_k(1:dims.n_primal),solver_initialization.p0));
             f_opt_ii = full(mpec_casadi.f_fun(x_k(1:dims.n_primal),solver_initialization.p0));
-            print_iter_stats('I',0,f_opt_ii,h_std_ii,h_comp_ii,'/',0,'Initial guess',0,0,0,1)
+            if opts.verbose_solver
+                print_iter_stats('I',0,f_opt_ii,h_std_ii,h_comp_ii,'/',0,'Initial guess',0,0,0,1)
+            end
 
             t_phase_i_start = tic;
             switch opts.initialization_strategy

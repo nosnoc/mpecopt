@@ -1,11 +1,12 @@
 classdef TestPhaseOneOpts < matlab.unittest.TestCase
     properties (TestParameter)
         % Only test the 
-        initialization_strategy = {'RelaxAndProject', 'FeasibilityEll1General', 'FeasibilityEllInfGeneral', 'AllBiactive', 'TakeInitialGuessActiveSet'};
+        initialization_strategy = {'RelaxAndProject', 'FeasibilityEll1General', 'FeasibilityEllInfGeneral', 'TakeInitialGuessActiveSet', 'TakeProvidedActiveSet'};
     end
 
     methods (Test, ParameterCombination = 'exhaustive')
         function test_pds_integrator(tc,initialization_strategy)
+            import casadi.*
             x1 = SX.sym('x1');
             x2 = SX.sym('x2');
             x3 = SX.sym('x3');
@@ -25,7 +26,7 @@ classdef TestPhaseOneOpts < matlab.unittest.TestCase
                 -x1-x2+7-x8];
             G = [x6;x7;x8];
             H = [x3;x4;x5];
-            x0 = zeros(8,1);
+            x0 = [0;0;1;0;0;0;1;1];
             lbw = zeros(8,1);
             ubw = inf*ones(8,1);
 
@@ -33,15 +34,15 @@ classdef TestPhaseOneOpts < matlab.unittest.TestCase
             ubg = zeros(4,1);
 
             mpec = struct('x', w, 'f', f, 'g', g,'p',p,'G',G ,'H',H);
-            solver_initalization = struct('x0', x0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg, 'ubg',ubg,'p0',1);
+            solver_initalization = struct('x0', x0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg, 'ubg',ubg,'p0',1, 'y0', [0;1;1]);
 
-            opts = HomotopySolverOptions();
+            opts = MPECOptimizerOptions();
             opts.initialization_strategy = initialization_strategy;
+            opts.verbose_solver = false;
+            opts.verbose_summary = false;
 
-            solver = Mpecopt(mpec, solver_settings);
-            [sol_active_set,stats_active_set] = solver.solve(solver_initalization);
-
-            tc.verify()
+            solver = Mpecopt(mpec, opts);
+            [sol,stats] = solver.solve(solver_initalization);
         end
     end
 end
