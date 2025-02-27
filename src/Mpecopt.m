@@ -831,15 +831,15 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             n_ubx = length(ind_x_ub);
             n_lbx = length(ind_x_lb);
 
-            lbx_reduced = lbx(ind_x_lb);
-            ubx_reduced = ubx(ind_x_ub);
+            lbx_reduced = solver_initialization.lbx(ind_x_lb);
+            ubx_reduced = solver_initialization.ubx(ind_x_ub);
             % Generate casadi functions for objective and constraint function evaluations
             % Zero order
             g_eq = g(ind_g_eq)-solver_initialization.lbg(ind_g_eq);                    % g_eq = g - g_lb = 0
-            g_ineq_ub = ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);                           % g_ineq_ub = g_ub - g >= 0
-            g_ineq_lb = g(ind_g_ineq_lb)-lbg(ind_g_ineq_lb);                           % g_ineq_lb = g - g_lb >= 0
-            g_ineq = [ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);...
-                g(ind_g_ineq_lb)-lbg(ind_g_ineq_lb)];                            % g_ineq = [g_ub; g_lb]
+            g_ineq_ub = solver_initialization.ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);                           % g_ineq_ub = g_ub - g >= 0
+            g_ineq_lb = g(ind_g_ineq_lb)-solver_initialization.lbg(ind_g_ineq_lb);                           % g_ineq_lb = g - g_lb >= 0
+            g_ineq = [solver_initialization.ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);...
+                g(ind_g_ineq_lb)-solver_initialization.lbg(ind_g_ineq_lb)];                            % g_ineq = [g_ub; g_lb]
             n_ineq = size(g_ineq,1);
             % first-order constraint Jacobians
             if n_eq > 0
@@ -900,8 +900,8 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             sense_B = repmat('>',1,2*dims.n_comp);
             sense = [repmat('=',1,n_eq), repmat('>',1,n_ineq), sense_B];
             lpec_casadi.sense = sense;
-            lpec_casadi.lbx = lbx;
-            lpec_casadi.ubx = ubx;
+            lpec_casadi.lbx = solver_initialization.lbx;
+            lpec_casadi.ubx = solver_initialization.ubx;
             lpec_casadi.g_eq_fun = mpec_casadi.g_eq_fun;
             lpec_casadi.g_ineq_fun = mpec_casadi.g_ineq_fun;
             lpec_casadi.nabla_g_eq_fun = mpec_casadi.nabla_g_eq_fun;
