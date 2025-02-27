@@ -12,19 +12,15 @@ G = mpec.G;
 H = mpec.H;
 
 x_k = solver_initalization.x0; % inital guess
-lbx = solver_initalization.lbx;
-ubx = solver_initalization.ubx;
-lbg = solver_initalization.lbg;
-ubg = solver_initalization.ubg;
 
 if isfield(mpec,'p')
     p = mpec.p;
-    p0 = solver_initalization.p0;
-
+    if ~isfield(solver_initalization,'p0')
+        error('mpec.p defined, but no solver_initalization.p0 passed.')
+    end
 else
     p = [];
-    p0 = [];
-    solver_initalization.p0 = p0;
+    solver_initalization.p0 = [];
 end
 
 %% Edit complementarity constraints
@@ -41,8 +37,8 @@ if settings.initial_comp_all_zero
     G_eval = zeros(n_comp,1);
     H_eval = zeros(n_comp,1);
 else
-    G_eval = full(G_fun(x_k,p0));
-    H_eval = full(G_fun(x_k,p0));
+    G_eval = full(G_fun(x_k,solver_initalization.p0));
+    H_eval = full(G_fun(x_k,solver_initalization.p0));
 end
 
 
@@ -52,15 +48,15 @@ end
 if settings.lift_complementarities_full
     % define lift vairables
     x1 = SX.sym('x1',n_comp);
-    lbx = [lbx;0*ones(n_comp,1)];
-    ubx = [ubx;inf*ones(n_comp,1)];
+    solver_initalization.lbx = [solver_initalization.lbx;0*ones(n_comp,1)];
+    solver_initalization.ubx = [solver_initalization.ubx;inf*ones(n_comp,1)];
     % update x and init guess
     x = [x;x1];
     x_k = [x_k;G_eval];
     % lift
     g = [g;x1-G];
-    lbg = [lbg;0*ones(n_comp,1)];
-    ubg = [ubg;0*ones(n_comp,1)];
+    solver_initalization.lbg = [solver_initalization.lbg;0*ones(n_comp,1)];
+    solver_initalization.ubg = [solver_initalization.ubg;0*ones(n_comp,1)];
 else
     % lifting with only those that are not scaler
     % define lift vairables
@@ -76,16 +72,16 @@ else
     end
     if n_lift_x1 > 0
         x1_lift = SX.sym('x1_lift',n_lift_x1);
-        lbx = [lbx;0*ones(n_lift_x1,1)];
-        ubx = [ubx;inf*ones(n_lift_x1 ,1)];
+        solver_initalization.lbx = [solver_initalization.lbx;0*ones(n_lift_x1,1)];
+        solver_initalization.ubx = [solver_initalization.ubx;inf*ones(n_lift_x1 ,1)];
         % x1 = [x(ind_scalar);x1_lift];
         % update x and init guess
         x = [x;x1_lift];
         x_k = [x_k;G_eval(ind_nonscalar_x1)];
         % lift
         g = [g;x1_lift-G(ind_nonscalar_x1)];
-        lbg = [lbg;0*ones(n_lift_x1 ,1)];
-        ubg = [ubg;0*ones(n_lift_x1 ,1)];
+        solver_initalization.lbg = [solver_initalization.lbg;0*ones(n_lift_x1 ,1)];
+        solver_initalization.ubg = [solver_initalization.ubg;0*ones(n_lift_x1 ,1)];
 
         x1 = G_copy;
         x1(ind_nonscalar_x1) = x1_lift;
@@ -97,15 +93,15 @@ end
 if settings.lift_complementarities_full
     % define lift vairables
     x2 = SX.sym('x2',n_comp);
-    lbx = [lbx;0*ones(n_comp,1)];
-    ubx = [ubx;inf*ones(n_comp,1)];
+    solver_initalization.lbx = [solver_initalization.lbx;0*ones(n_comp,1)];
+    solver_initalization.ubx = [solver_initalization.ubx;inf*ones(n_comp,1)];
     % update x and init guess
     x = [x;x2];
     x_k = [x_k;H_eval];
     % lift
     g = [g;x2-H];
-    lbg = [lbg;0*ones(n_comp,1)];
-    ubg = [ubg;0*ones(n_comp,1)];
+    solver_initalization.lbg = [solver_initalization.lbg;0*ones(n_comp,1)];
+    solver_initalization.ubg = [solver_initalization.ubg;0*ones(n_comp,1)];
 else
     % lifting with only those that are not scaler
     [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
@@ -120,16 +116,16 @@ else
     end
     if n_lift_x2 > 0
         x2_lift = SX.sym('x2_lift',n_lift_x2);
-        lbx = [lbx;0*ones(n_lift_x2,1)];
-        ubx = [ubx;inf*ones(n_lift_x2 ,1)];
+        solver_initalization.lbx = [solver_initalization.lbx;0*ones(n_lift_x2,1)];
+        solver_initalization.ubx = [solver_initalization.ubx;inf*ones(n_lift_x2 ,1)];
         % x2 = [x(ind_scalar);x2_lift];
         % update x and init guess
         x = [x;x2_lift];
         x_k = [x_k;H_eval(ind_nonscalar_x2)];
         % lift
         g = [g;x2_lift-H(ind_nonscalar_x2)];
-        lbg = [lbg;0*ones(n_lift_x2 ,1)];
-        ubg = [ubg;0*ones(n_lift_x2 ,1)];
+        solver_initalization.lbg = [solver_initalization.lbg;0*ones(n_lift_x2 ,1)];
+        solver_initalization.ubg = [solver_initalization.ubg;0*ones(n_lift_x2 ,1)];
 
         x2 = H_copy;
         x2(ind_nonscalar_x2) = x2_lift;
@@ -153,8 +149,8 @@ else
     ind_x2 = [];
 end
 
-lbx(ind_x1) = 0;
-lbx(ind_x2) = 0;
+solver_initalization.lbx(ind_x1) = 0;
+solver_initalization.lbx(ind_x2) = 0;
 
 n_primal = length(x);
 n_primal_x0 = n_primal - 2*n_comp; % primal variables excluding the complementarity variables;
@@ -165,14 +161,14 @@ end
 x0 = x(ind_x0); % Variables not involved in complementarity constraints.
 
 %% Split into equalites and inequalities
-ind_g_eq = find(lbg == ubg);
-ind_g_ineq = find(lbg < ubg);
+ind_g_eq = find(solver_initalization.lbg == solver_initalization.ubg);
+ind_g_ineq = find(solver_initalization.lbg < solver_initalization.ubg);
 
-ind_g_ineq_lb = find(lbg >- inf & lbg < ubg);
-ind_g_ineq_ub = find(ubg < inf & lbg < ubg);
+ind_g_ineq_lb = find(solver_initalization.lbg >- inf & solver_initalization.lbg < solver_initalization.ubg);
+ind_g_ineq_ub = find(solver_initalization.ubg < inf & solver_initalization.lbg < solver_initalization.ubg);
 
-ind_x_lb = find(lbx > -inf);
-ind_x_ub =  find(ubx < inf);
+ind_x_lb = find(solver_initalization.lbx > -inf);
+ind_x_ub =  find(solver_initalization.ubx < inf);
 
 n_eq = length(ind_g_eq);
 n_g_ineq_ub = length(ind_g_ineq_ub);
@@ -181,21 +177,21 @@ n_g_ineq_lb = length(ind_g_ineq_lb);
 n_ubx = length(ind_x_ub);
 n_lbx = length(ind_x_lb);
 
-lbx_reduced = lbx(ind_x_lb);
-ubx_reduced = ubx(ind_x_ub);
 g_sym = g;
 % Generate casadi functions for objective and constraint function evaluations
 nabla_f = f.jacobian(x)';
 % Zero order
-g_eq = g(ind_g_eq)-lbg(ind_g_eq);                                          % g_eq = g - g_lb = 0
-g_ineq_ub = ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);                           % g_ineq_ub = g_ub - g >= 0
-g_ineq_lb = g(ind_g_ineq_lb)-lbg(ind_g_ineq_lb);                           % g_ineq_lb = g - g_lb >= 0
-g_ineq = [ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);...
-    g(ind_g_ineq_lb)-lbg(ind_g_ineq_lb)];                            % g_ineq = [g_ub; g_lb]
+g_eq = g(ind_g_eq)-solver_initalization.lbg(ind_g_eq);                                          % g_eq = g - g_lb = 0
+g_ineq_ub = solver_initalization.ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);                           % g_ineq_ub = g_ub - g >= 0
+g_ineq_lb = g(ind_g_ineq_lb)-solver_initalization.lbg(ind_g_ineq_lb);                           % g_ineq_lb = g - g_lb >= 0
+g_ineq = [solver_initalization.ubg(ind_g_ineq_ub)-g(ind_g_ineq_ub);...
+    g(ind_g_ineq_lb)-solver_initalization.lbg(ind_g_ineq_lb)];                            % g_ineq = [g_ub; g_lb]
 n_ineq = size(g_ineq,1);
-g_tnlp = [g_eq;g_ineq];
-lbg_tnlp = [zeros(n_eq,1);zeros(n_ineq,1)];
-ubg_tnlp = [zeros(n_eq,1);inf*ones;zeros(n_ineq,1)];
+
+% g_tnlp = [g_eq;g_ineq];
+% lbg_tnlp = [zeros(n_eq,1);zeros(n_ineq,1)];
+% ubg_tnlp = [zeros(n_eq,1);inf*ones;zeros(n_ineq,1)];
+
 % first-order constraint Jacobians
 if n_eq > 0
     nabla_g = g_sym.jacobian(x);
@@ -240,20 +236,14 @@ mpec_casadi.nabla_g_ineq_ub_fun  = Function('nabla_g_ineq_ub_fun',{x,p},{nabla_g
 mpec_casadi.nabla_g_ineq_lb_fun  = Function('nabla_g_ineq_lb_fun',{x,p},{nabla_g_ineq_lb});
 mpec_casadi.nabla_g_ineq_fun  = Function('nabla_g_ineq_lb_fun',{x,p},{nabla_g_ineq});
 
-% Update initalization
-solver_initalization.x0 = x_k;
-solver_initalization.lbx = lbx;
-solver_initalization.ubx = ubx;
-solver_initalization.lbg = lbg;
-solver_initalization.ubg = ubg;
-solver_initalization.p0 = p0;
+
 %% Infeasiblity meausre in inf norm
 % all standard constraints
 h_eq = max(abs(g_eq));
 h_ineq_ub = max(min(g_ineq_ub,0));
 h_ineq_lb = max(min(g_ineq_lb,0));
-h_ubx = max(min(ubx-x,0));
-h_lbx = max(min(x-lbx,0));
+h_ubx = max(min(solver_initalization.ubx-x,0));
+h_lbx = max(min(x-solver_initalization.lbx,0));
 % Summary
 h_std = max([h_eq;h_ineq_ub;h_ineq_lb;h_ubx;h_lbx]);
 if n_comp > 0
@@ -273,6 +263,7 @@ mpec_casadi.h_std_fun  = Function('h_std_fun',{x,p},{h_std});
 mpec_casadi.h_comp_fun  = Function('h_comp_fun',{x,p},{h_comp});
 mpec_casadi.h_total_fun = Function('h_comp_fun',{x,p},{max(h_comp,h_std)});
 
+solver_initalization.x0 = x_k;
 %% Store some dimensions
 dims.n_slacks = 0; % in generla no slacks, except in feasiblity problems
 dims.ind_x0 = ind_x0;
