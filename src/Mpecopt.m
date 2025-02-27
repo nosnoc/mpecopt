@@ -1,12 +1,12 @@
 classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
     properties
-        opts
-        mpec
-        mpec_casadi
-        lpec_casadi
-        dims
-        solver_initialization
-        stats
+        opts % all options of mpecopt
+        mpec % casadi expressions defining the mpec/mpcc
+        mpec_casadi % all casadi functions and solvers needed for the mpec/mpec
+        lpec_casadi % all casadi functions and solvers needed for the lpec/lpec
+        dims % all problem dimensions and relevant index sets
+        solver_initialization % solver initialization data, x0, lower and upper bounds of variables and constraints
+        stats % solution statistics, mostly cpu times, and some qualitative solution information
     end
 
     methods
@@ -627,7 +627,6 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 end
             end
 
-
             %% -----------------------------Detalied solver stats---------------------------
             % summarized more specific
             try
@@ -635,7 +634,6 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             catch
                 stats.cpu_time_total = stats.cpu_time_phase_ii;
             end
-
 
             stats.cpu_time_lpec_preparation = sum(stats.iter.cpu_time_lpec_preparation_iter);
             stats.cpu_time_lpec_phase_i = sum(stats.iter.cpu_time_lpec_phase_i_iter);
@@ -871,8 +869,8 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                     h_comp= max(abs(x1).*abs(x2)); % here kappa =0.1 to have reduce of the value by factor of 10
                                                    % h_comp= sqrt(max(abs(min((x1),(x2))))); % here kappa =0.01 to reduce the value above by factor of 10
                 else
-                    h_comp= max(min(abs(x1),abs(x2))); % here kappa =0.01 to reduce the value above by factor of 10
-                                                       % h_comp = max(abs(min(x1,x2)));
+                    h_comp= max(min(abs(x1),abs(x2))); % 
+                    % h_comp = max(abs(min(x1,x2)));
                 end
             else
                 h_comp  = 0;
@@ -907,7 +905,6 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             lpec_casadi.nabla_g_eq_fun = mpec_casadi.nabla_g_eq_fun;
             lpec_casadi.nabla_g_ineq_fun = mpec_casadi.nabla_g_ineq_fun;
             
-            
             %% Update dims
             dims.n_eq = n_eq;
             dims.n_ineq = n_ineq;
@@ -937,9 +934,7 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 g = mpec.g.sym;
                 G = mpec.G.sym;
                 H = mpec.H.sym;
-
-                p = mpec.p.sym;
-                
+                p = mpec.p.sym;               
             else
                 try
                     x = mpec.x;
