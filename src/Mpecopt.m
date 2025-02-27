@@ -28,6 +28,7 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
                 solver_initialization = []
             end
             %% Get data
+            import casadi.*
             obj.process_solver_initialization(solver_initialization);
             solver_initialization = obj.solver_initialization;
             mpec = obj.mpec;
@@ -736,17 +737,22 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             if ~isempty(p.Results.y0)
                 obj.solver_initialization.y0 = p.Results.y0;
             end
+
             [solution,stats] = obj.solve(obj.solver_initialization);
             varargout{1} = solution;
             obj.stats = stats;
         end
 
         function obj = parenAssign(obj,index_op,varargin)
-            nosnoc.error('invalid', 'Invalid operation');
+            % nosnoc.error('invalid', 'Invalid operation');
+            % TODO: there is no nosnoc in mpecopt - adjust errors messages
+            error('mpecopt: Invalid operation.')
         end
         
         function obj = parenDelete(obj,index_op)
-            nosnoc.error('invalid', 'Invalid operation')
+            % nosnoc.error('invalid', 'Invalid operation')
+            % TODO: there is no nosnoc in mpecopt - adjust errors messages
+            error('mpecopt: Invalid operation.')
         end
 
         function n = parenListLength(obj,index_op,ctx)
