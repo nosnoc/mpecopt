@@ -1,11 +1,11 @@
-classdef TestPhaseOneOpts < matlab.unittest.TestCase
+classdef TestPhaseTwoOpts < matlab.unittest.TestCase
     properties (TestParameter)
         % Only test the 
-        initialization_strategy = {'RelaxAndProject', 'FeasibilityEll1General', 'FeasibilityEllInfGeneral', 'TakeInitialGuessActiveSet', 'TakeProvidedActiveSet'};
+        piece_nlp_strategy = {'TNLP', 'BNLP_integer', 'BNLP_Gradient1', 'BNLP_Gradient2'};
     end
 
     methods (Test, ParameterCombination = 'exhaustive')
-        function test_initialization_strategy(tc,initialization_strategy)
+        function test_initialization_strategy(tc,piece_nlp_strategy)
             import casadi.*
             import matlab.unittest.fixtures.SuppressedWarningsFixture
             tc.applyFixture( ...
@@ -41,7 +41,7 @@ classdef TestPhaseOneOpts < matlab.unittest.TestCase
             solver_initalization = struct('x0', x0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg, 'ubg',ubg,'p0',1, 'y0', [0;1;1]);
 
             opts = MPECOptimizerOptions();
-            opts.initialization_strategy = initialization_strategy;
+            opts.piece_nlp_strategy = piece_nlp_strategy;
             %opts.verbose_solver = false;
             %opts.verbose_summary = false;
 

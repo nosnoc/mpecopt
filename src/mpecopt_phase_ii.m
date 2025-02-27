@@ -379,8 +379,8 @@ if (stats.success || k==settings.max_iter) && settings.compute_tnlp_stationary_p
         cpu_time_nlp_k_l = toc(t_nlp_start);
         x_k_multi = full(results_nlp.x);
         lambda_x_k = full(results_nlp.lam_x);
+        [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,settings);
     end
-    [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,settings);
 end
 
 % Debug falure of stationary point computation
