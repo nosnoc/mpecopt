@@ -1,4 +1,4 @@
-classdef InitalizationStrategy
+classdef InitializationStrategy
     enumeration
         RelaxAndProject  % solve a scholtes relaxed problem, then an LPEC to get an active set, solve BNLP after and take this as x0;
         TakeInitialGuessDirectly % use the provided initial guess and just start with phase II (make sense if x0 is a feasible point of some BNLP)

@@ -2,7 +2,7 @@ clear all; clc; close all;
 %%
 import casadi.*
 % different stationarity types
-origin_stationarity = 'A';
+origin_stationarity = 'M';
 switch origin_stationarity 
     case 'S'
 %         a = 1;  c = 0;  b = -1;  d =0 ;
@@ -25,9 +25,8 @@ f = (a*x1-b)^2+(c*x2-d)^2;
 G = x1;
 H = x2;
 
-x0 = [0;2]; % Fails with M
 % x0 = [2;0];
-% x0  = [0;0];
+x0  = [0;0];
 
 lbx = [0;0];
 ubx = [inf;inf];
@@ -41,9 +40,12 @@ w_opt_reg = full(sol.x);
 f_opt_reg = full(sol.f);
 %%  mpecopt
 solver_settings = MPECOptimizerOptions();
-solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
+solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
+% [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+solver = Mpecopt(mpec, solver_settings);
+[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+
 w_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
 

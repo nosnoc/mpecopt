@@ -30,15 +30,26 @@ solver_settings = MPECOptimizerOptions();
 solver_settings.consider_all_complementarities_in_lpec = false;
 solver_settings.plot_lpec_iterate = 1;
 % solver_settings.settings_lpec.lpec_solver = 'Ell_inf';
-
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+
+
+% all at once (less efficent if problem needs to be resolved with different data):
+% [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+
+% Create solver object
+solver = Mpecopt(mpec, solver_settings);
+% solve problem
+[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+
+
 w_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
+
+%% print and compare results
 fprintf('\n-------------------------------------------------------------------------------\n');
 fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Sucess\t Stat. type\n')
 fprintf('-------------------------------------------------------------------------------\n');
-fprintf('homotopy \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
+fprintf('Homotopy \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
 fprintf('Active Set \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_active_set,stats_active_set.comp_res,stats_active_set.n_biactive,stats_active_set.cpu_time_total,stats_active_set.success,stats_active_set.multiplier_based_stationarity)
 fprintf('-------------------------------------------------------------------------------\n');
 fprintf(' || w_homotopy - w_active_set || = %2.2e \n',norm(w_opt_homotopy-w_opt_active_set));

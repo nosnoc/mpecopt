@@ -3,7 +3,7 @@ clc
 close all
 import casadi.*
 
-%% Example MPCC
+%% Example MPCC - scholtes4
 % optimization variables 
 x1 = SX.sym('x1');
 x2 = SX.sym('x2');
@@ -47,13 +47,18 @@ f_opt_homotopy = full(result_homotopy.f);
 % Solver settings
 solver_settings = MPECOptimizerOptions();
 % change some settings
-solver_settings.settings_lpec.lpec_solver = 'Highs_casadi'  ; % 'Gurobi'; for best perfomance; 'Highs_casadi' - via casadi conic
+solver_settings.settings_lpec.lpec_solver = 'Highs_casadi'  ; % 'Gurobi'; for best perfomance; 'Highs_casadi' - via CasADi conic
 solver_settings.settings_casadi_nlp.ipopt.linear_solver = 'mumps'; % 'ma27' for better perfomance
 solver_settings.rho_TR_phase_i_init = 1e1;
 solver_settings.rho_TR_phase_ii_init = 1e-4;
 
 % Call solver
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+% [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+
+solver = Mpecopt(mpec, solver_settings);
+% solve problem
+[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+
 w_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
 

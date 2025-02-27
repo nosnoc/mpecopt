@@ -30,10 +30,10 @@ solver_functions = {@mpec_optimizer, @mpec_homotopy_solver};
 
 default_opts1 = MPECOptimizerOptions();
 default_opts1.solver_name = solver_names{1};
-default_opts1.initalization_strategy = 'RelaxAndProject';
+default_opts1.initialization_strategy = 'RelaxAndProject';
 default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";
 default_opts1.relax_and_project_iters = 1;
-% default_opts1.initalization_strategy = "TakeInitialGuessDirectly";
+% default_opts1.initialization_strategy = "TakeInitialGuessDirectly";
 default_opts1.settings_lpec.lpec_solver = "Gurobi";
 default_opts1.debug_mode_on = 0;
 default_opts1.verbose_solver = 1;
