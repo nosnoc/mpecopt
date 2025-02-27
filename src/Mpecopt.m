@@ -49,6 +49,12 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             x_trail_nlp = x_k;
             feasible_bnlp_found = false; % did phase i find a feasible bnlp?
 
+            % read all bounds
+            lbx = solver_initialization.lbx;
+            ubx = solver_initialization.ubx;
+            lbg = solver_initialization.lbg;
+            ubg = solver_initialization.ubg;
+
             rho_TR_k_l = opts.rho_TR_phase_i_init;
             % stats.iter.X_outer = x_k; % save all accepted steps;
             % stats.iter.X_all = x_k;  % save all iterates of accepted and rejceted steps;
@@ -755,6 +761,11 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
             mpec_casadi = obj.mpec_casadi;
             lpec_casadi = obj.lpec_casadi;
             dims = obj.dims;
+
+            % check does a parameter exist:
+            if ~isfield(solver_initialization,"p0")
+                solver_initialization.p0 = [];
+            end
             
             G_fun = mpec_casadi.G_fun;
             H_fun = mpec_casadi.H_fun;
