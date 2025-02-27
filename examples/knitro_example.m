@@ -47,7 +47,7 @@ ubg = zeros(4,1);
 
 solver_settings = MPECOptimizerOptions();
 solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
-solver_settings.initalization_strategy = "FeasibilityEll1General";
+solver_settings.initialization_strategy = "FeasibilityEll1General";
 
 
 solution = mpec_optimizer(mpec, solver_initalization, solver_settings);

@@ -33,14 +33,14 @@ f_opt_scholtes = full(result_scholtes.f);
 % Pivoting
 solver_settings = MPECOptimizerOptions();
 solver_settings.settings_lpec.lpec_solver = "Highs_casadi";
-solver_settings.initalization_strategy ="RelaxAndProject";
-solver_settings.initalization_strategy = "FeasibilityEll1General";
+solver_settings.initialization_strategy ="RelaxAndProject";
+solver_settings.initialization_strategy = "FeasibilityEll1General";
 solver_settings.relax_and_project_homotopy_parameter_steering = "Ell_inf";
-% solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
+% solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = true;
 solver_settings.tol_B_stationarity = 1e-8;
 
-% solver_settings.initalization_strategy ="TakeProvidedActiveSet";
+% solver_settings.initialization_strategy ="TakeProvidedActiveSet";
 % solver_initalization.y0 = [0];
 
 [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);

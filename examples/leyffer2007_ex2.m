@@ -32,7 +32,7 @@ f_opt_scholtes = full(result_scholtes.f);
 % Pivoting
 solver_settings = MPECOptimizerOptions();
 solver_settings.settings_lpec.lpec_solver ="Highs";
-solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
+solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = 1; % indentifying the biactive set fails and wrong sol?
 % solver_settings.tol_active = 1e-5;
 % solver_settings.consider_all_complementarities_in_lpec = 1; % 

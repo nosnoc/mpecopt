@@ -25,7 +25,7 @@ mpec = struct('x', x,'f',f, 'g',g,'G',G,'H',H);
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
 %%  Settings
 solver_settings = MPECOptimizerOptions();
-solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
+solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = 1;
 solver_settings.rho_TR_phase_ii_init = 1.5;
 solver_settings.TR_reducing_factor = 0.5;

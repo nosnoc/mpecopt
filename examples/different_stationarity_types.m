@@ -41,7 +41,7 @@ w_opt_reg = full(sol.x);
 f_opt_reg = full(sol.f);
 %%  mpecopt
 solver_settings = MPECOptimizerOptions();
-solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
+solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 
 [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 w_opt_active_set = full(result_active_set.x);

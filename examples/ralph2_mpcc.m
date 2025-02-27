@@ -32,8 +32,8 @@ fprintf('x_opt = (%2.4f,%2.4f), f_opt = %2.4f. \n',w_opt_scholtes(1),w_opt_schol
 %%  Settings
 solver_settings = MPECOptimizerOptions();
 solver_settings.settings_lpec.lpec_solver ="Gurobi";
-% solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
-% solver_settings.initalization_strategy = "RelaxAndProject";
+% solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
+% solver_settings.initialization_strategy = "RelaxAndProject";
 solver_settings.consider_all_complementarities_in_lpec = true;
 solver_settings.tol_B_stationarity = 1e-8;
 solver_settings.relax_and_project_iters = 2;
