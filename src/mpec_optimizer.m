@@ -68,7 +68,7 @@ end
 cpu_time_prepare_mpec = toc(t_prepare_mpec);
 
 % ------------------ Prepare homotopy solver for Phase I -----------------------------
-if strcmp(settings.initalization_strategy,"RelaxAndProject")
+if strcmp(settings.initialization_strategy,"RelaxAndProject")
     t_generate_nlp_solvers = tic;
     % TODO : input just mpec_casadi and solver_initalization
     [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi.f,mpec_casadi.g,mpec_casadi.x,mpec_casadi.x1,mpec_casadi.x2,mpec_casadi.p,lbx,ubx,lbg,ubg,p0,x_k,settings,dims);
@@ -101,7 +101,7 @@ f_opt_ii = full(mpec_casadi.f_fun(x_k(1:dims.n_primal),p0));
 print_iter_stats('I',0,f_opt_ii,h_std_ii,h_comp_ii,'/',0,'Initial guess',0,0,0,1)
 
 t_phase_i_start = tic;
-switch settings.initalization_strategy
+switch settings.initialization_strategy
     case 'RelaxAndProject'
         h_comp_ii = 1;
         ii = 1;
@@ -315,7 +315,7 @@ switch settings.initalization_strategy
             fprintf('\n MPECopt: initial guess already feasible. \n')
         else
             if n_g > 0
-                if strcmp(settings.initalization_strategy,"FeasibilityEll1General")
+                if strcmp(settings.initialization_strategy,"FeasibilityEll1General")
                     s = SX.sym('s',n_g); %define slack variables for ell_1 norm of generla constraints;
                     n_slacks = n_g;
                 else
@@ -328,7 +328,7 @@ switch settings.initalization_strategy
                 ubg_s = [];
                 % (TODO: vectorize the for loop above for better perfomance)
                 for ii = 1:n_g
-                    if strcmp(settings.initalization_strategy,"FeasibilityEll1General")
+                    if strcmp(settings.initialization_strategy,"FeasibilityEll1General")
                         s_ii = s(ii);
                     else
                         s_ii = s;
@@ -530,7 +530,7 @@ stats.phase_i_infeasibility_detected = ~stats.success_phase_i;
 % -------------------- Check is the BNLP solution S-stationary ------------------------------
 h_total_phase_i  = full(mpec_casadi.h_total_fun(x_k,p0));   % infeasibility
 
-if stats.success_phase_i && settings.stop_if_S_stationary && ~stats.stopping_criterion_fullfiled && h_total_phase_i <= settings.tol_feasibility && ~(strcmp(settings.initalization_strategy,'FeasibilityEll1General') || strcmp(settings.initalization_strategy,'FeasibilityEllInfGeneral'))
+if stats.success_phase_i && settings.stop_if_S_stationary && ~stats.stopping_criterion_fullfiled && h_total_phase_i <= settings.tol_feasibility && ~(strcmp(settings.initialization_strategy,'FeasibilityEll1General') || strcmp(settings.initialization_strategy,'FeasibilityEllInfGeneral'))
     active_set_estimate_k = find_active_sets(x_k, dims, settings.tol_active); % check is it S-stationary;
     if sum(active_set_estimate_k.I_00) == 0
         stats.stopping_criterion_fullfiled = true;

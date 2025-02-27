@@ -25,14 +25,14 @@ mpec = struct('x', x, 'f', f, 'g', g,'G',G,'H',H,'p',p);
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg,'p0',p0);
 % Scholtes
 settings = HomotopySolverOptions();
-[result_scholtes,stats_scholtes] = mpec_homotopy_solver(mpec,solver_initalization,settings);
-w_opt = full(result_scholtes.x);
-f_opt_scholtes = full(result_scholtes.f);
+[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings);
+x_opt = full(result_homotopy.x);
+f_opt_scholtes = full(result_homotopy.f);
 %%
 % Pivoting
 solver_settings = MPECOptimizerOptions();
 solver_settings.settings_lpec.lpec_solver ="Highs";
-solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
+solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = 1; % indentifying the biactive set fails and wrong sol?
 % solver_settings.tol_active = 1e-5;
 % solver_settings.consider_all_complementarities_in_lpec = 1; % 
@@ -42,11 +42,16 @@ solver_settings.rho_TR_phase_ii_init = 0.3;
 solver_settings.rho_TR_phase_i_init = 10;
 solver_settings.stop_if_S_stationary = 0;
 
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
-w_opt_active_set = full(result_active_set.x);
+
+% [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+
+solver = Mpecopt(mpec, solver_settings);
+[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+
+x_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
 
-fprintf('solution is (%2.4f,%2.4f) \n',w_opt_active_set(1),w_opt_active_set(2));
+fprintf('solution is (%2.4f,%2.4f) \n',x_opt_active_set(1),x_opt_active_set(2));
 
 % solution.X_outer
 

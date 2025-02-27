@@ -25,15 +25,15 @@ mpec = struct('x', x, 'f', f, 'g', g,'G',G,'H',H);
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
 % Scholtes
 settings = HomotopySolverOptions();
-[result_scholtes,stats_scholtes] = mpec_homotopy_solver(mpec,solver_initalization,settings);
-f_opt_scholtes = full(result_scholtes.f);
-w_opt_scholtes = full(result_scholtes.x);
-fprintf('x_opt = (%2.4f,%2.4f), f_opt = %2.4f. \n',w_opt_scholtes(1),w_opt_scholtes(2),f_opt_scholtes);
+[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings);
+f_opt_homotopy = full(result_homotopy.f);
+x_opt_homotopy = full(result_homotopy.x);
+fprintf('x_opt = (%2.4f,%2.4f), f_opt = %2.4f. \n',x_opt_homotopy(1),x_opt_homotopy(2),f_opt_homotopy);
 %%  Settings
 solver_settings = MPECOptimizerOptions();
 solver_settings.settings_lpec.lpec_solver ="Gurobi";
-% solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
-% solver_settings.initalization_strategy = "RelaxAndProject";
+% solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
+% solver_settings.initialization_strategy = "RelaxAndProject";
 solver_settings.consider_all_complementarities_in_lpec = true;
 solver_settings.tol_B_stationarity = 1e-8;
 solver_settings.relax_and_project_iters = 2;
@@ -41,20 +41,25 @@ solver_settings.relax_and_project_kappa = 0.5;
 solver_settings.relax_and_project_sigma0 = 0.01;
 solver_settings.plot_lpec_iterate = 1;
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
-w_opt_active_set = full(result_active_set.x);
+% [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+
+
+solver = Mpecopt(mpec, solver_settings);
+[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+
+x_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
 
 
 fprintf('\n-------------------------------------------------------------------------------\n');
 fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Sucess\t Stat. type\n')
 fprintf('-------------------------------------------------------------------------------\n');
-fprintf('Scholtes \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_scholtes,stats_scholtes.comp_res,stats_scholtes.n_biactive,stats_scholtes.cpu_time_total,stats_scholtes.success,stats_scholtes.multiplier_based_stationarity)
+fprintf('Scholtes \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
 fprintf('Active Set \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_active_set,stats_active_set.comp_res,stats_active_set.n_biactive,stats_active_set.cpu_time_total,stats_active_set.success,stats_active_set.multiplier_based_stationarity)
 fprintf('\n');
-fprintf(' || w_scholtes - w_active_set || = %2.2e \n',norm(w_opt_scholtes-w_opt_active_set));
+fprintf(' || x_reg - x_active_set || = %2.2e \n',norm(x_opt_homotopy-x_opt_active_set));
 
-fprintf('solution is (%2.4f,%2.4f) \n',w_opt_active_set(1),w_opt_active_set(2));
+fprintf('solution is (%2.4f,%2.4f) \n',x_opt_active_set(1),x_opt_active_set(2));
 
 %%
 nice_plot_colors

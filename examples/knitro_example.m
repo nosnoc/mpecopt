@@ -34,8 +34,8 @@ ubg = zeros(4,1);
 mpec = struct('x', w, 'f', f, 'g', g,'p',p,'G',G ,'H',H);
 solver_initalization = struct('x0', x0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg, 'ubg',ubg,'p0',1);
 settings = HomotopySolverOptions();
-[sol,stats] =  mpec_homotopy_solver(mpec,solver_initalization,settings);
-w_opt = full(sol.x);
+[sol_homotopy,stats_homotopy] =  mpec_homotopy_solver(mpec,solver_initalization,settings);
+x_opt_homotopy = full(sol_homotopy.x);
 
 g = [2*(x2-1)-1.5*x1+x3-0.5*x4+x5
     3*x1-x2-3-x6;...
@@ -47,12 +47,25 @@ ubg = zeros(4,1);
 
 solver_settings = MPECOptimizerOptions();
 solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
-solver_settings.initalization_strategy = "FeasibilityEll1General";
+solver_settings.initialization_strategy = "FeasibilityEll1General";
 
 
-solution = mpec_optimizer(mpec, solver_initalization, solver_settings);
-x_opt = full(solution.x);
-f_opt_ipopt = full(sol.f)
-f_opt_mpec_opt = solution.f
+ % [sol_active_set,stats_active_set]  = mpec_optimizer(mpec, solver_initalization, solver_settings);
+solver = Mpecopt(mpec, solver_settings);
+[sol_active_set,stats_active_set] = solver.solve(solver_initalization);
+
+
+x_opt_active_set = full(sol_active_set.x);
+f_opt_homotopy = full(sol_homotopy.f);
+f_opt_mpec_opt = sol_active_set.f;
+
+
+fprintf('\n-------------------------------------------------------------------------------\n');
+fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Sucess\t Stat. type\n')
+fprintf('-------------------------------------------------------------------------------\n');
+fprintf('Scholtes \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
+fprintf('Active Set \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_mpec_opt,stats_active_set.comp_res,stats_active_set.n_biactive,stats_active_set.cpu_time_total,stats_active_set.success,stats_active_set.multiplier_based_stationarity)
+fprintf('\n');
+fprintf(' || x_reg- x_active_set || = %2.2e \n',norm(x_opt_homotopy-x_opt_active_set));
 
 

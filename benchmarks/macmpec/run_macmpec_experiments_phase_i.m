@@ -71,12 +71,12 @@ default_opts4.relax_and_project_homotopy_parameter_steering = "Ell_1";
 
 default_opts5 = MPECOptimizerOptions();
 default_opts5.solver_name = solver_names{5};
-default_opts5.initalization_strategy = "FeasibilityEll1General";
+default_opts5.initialization_strategy = "FeasibilityEll1General";
 default_opts5.rho_TR_phase_i_init = 1e0;
 
 default_opts6 = MPECOptimizerOptions();
 default_opts6.solver_name = solver_names{6};
-default_opts6.initalization_strategy = "FeasibilityEllInfGeneral";
+default_opts6.initialization_strategy = "FeasibilityEllInfGeneral";
 default_opts6.rho_TR_phase_i_init = 1e0;
 
 opts = {default_opts1, default_opts2, default_opts3, default_opts4, default_opts5, default_opts6}; % list of options to pass to mpecsol (option structs)
