@@ -7,6 +7,10 @@ classdef TestPhaseOneOpts < matlab.unittest.TestCase
     methods (Test, ParameterCombination = 'exhaustive')
         function test_pds_integrator(tc,initialization_strategy)
             import casadi.*
+            import matlab.unittest.fixtures.SuppressedWarningsFixture
+            tc.applyFixture( ...
+                SuppressedWarningsFixture("optim:intlinprog:IgnoreX0"))
+
             x1 = SX.sym('x1');
             x2 = SX.sym('x2');
             x3 = SX.sym('x3');
@@ -38,8 +42,8 @@ classdef TestPhaseOneOpts < matlab.unittest.TestCase
 
             opts = MPECOptimizerOptions();
             opts.initialization_strategy = initialization_strategy;
-            opts.verbose_solver = false;
-            opts.verbose_summary = false;
+            %opts.verbose_solver = false;
+            %opts.verbose_summary = false;
 
             solver = Mpecopt(mpec, opts);
             [sol,stats] = solver.solve(solver_initalization);
