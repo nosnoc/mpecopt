@@ -1,11 +1,11 @@
-name: NOSNOC Test suite
+name: mpecopt Test suite
 
 on:
   pull_request:
 
 jobs:
   # Main job that runs all the tests for NOSNOC in matlab.
-  test_nosnoc:
+  test_mpecopt:
     strategy:
       fail-fast: false # We always want to see where the failures are.
       matrix:
@@ -33,6 +33,7 @@ jobs:
         release: ${{ matrix.matlab_version }}
         products: >
           Parallel_Computing_Toolbox
+          Optimization_Toolbox
         cache: true
     # Download relevant matlab release artifacts for the casadi release we are using.
     # TODO: Definitely cache this.
