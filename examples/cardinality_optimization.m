@@ -47,7 +47,7 @@ settings.homotopy_parameter_steering = "Direct";
 f_opt_homotopy = full(result_homotopy.f);
 w_opt_homotopy = full(result_homotopy.x);
 %%  Settings
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 % solver_settings.settings_lpec.lpec_solver = "Highs_casadi";
 % solver_settings.settings_lpec.lpec_solver = "Gurobi";
 solver_settings.rho_TR_phase_i_init = 1e-1;

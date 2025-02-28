@@ -26,7 +26,7 @@ settings = HomotopySolverOptions();
 f_opt_homotopy = full(result_homotopy.f);
 w_opt_homotopy = full(result_homotopy.x);
 %%  Settings
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.consider_all_complementarities_in_lpec = false;
 solver_settings.plot_lpec_iterate = 1;
 % solver_settings.settings_lpec.lpec_solver = 'Ell_inf';
@@ -37,7 +37,7 @@ solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ub
 % [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 
 % Create solver object
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 % solve problem
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 

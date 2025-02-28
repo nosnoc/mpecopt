@@ -60,39 +60,39 @@ solver_names = ["Gurobi-MILP", "HiGHS-MILP",...
     "$\ell_{\infty}$-MPEC","Reg-MPEC-stop",'mpecopt','reg','reg','reg'];
 
 
-default_opts1 = MPECOptimizerOptions();
+default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
 default_opts1.settings_lpec.lpec_solver = "Gurobi";
 
-default_opts2 = MPECOptimizerOptions();
+default_opts2 = mpecopt.Options();
 default_opts2.solver_name = solver_names{2};
 default_opts2.settings_lpec.lpec_solver = "Highs";
 default_opts2.rho_TR_phase_i_init = 1e-3;
 
-default_opts3 = MPECOptimizerOptions();
+default_opts3 = mpecopt.Options();
 default_opts3.solver_name = solver_names{3};
 default_opts3.settings_lpec.lpec_solver = "Reg";
 default_opts3.stop_if_S_stationary = 0;
 
-default_opts4 = MPECOptimizerOptions();
+default_opts4 = mpecopt.Options();
 default_opts4.solver_name = solver_names{4};
 default_opts4.settings_lpec.lpec_solver = "Ell_1";
 
-default_opts5 = MPECOptimizerOptions();
+default_opts5 = mpecopt.Options();
 default_opts5.solver_name = solver_names{5};
 default_opts5.settings_lpec.lpec_solver = "Ell_inf";
 
 
-default_opts6 = MPECOptimizerOptions();
+default_opts6 = mpecopt.Options();
 default_opts6.solver_name = solver_names{6};
 default_opts6.settings_lpec.lpec_solver = "Reg";
 default_opts6.stop_if_S_stationary = 1;
 
-default_opts7 = MPECOptimizerOptions();
+default_opts7 = mpecopt.Options();
 default_opts7.solver_name = solver_names{7};
 % default_opts7.settings_lpec.lpec_solver = 'Scholtes';
 
-default_opts8 = MPECOptimizerOptions();
+default_opts8 = mpecopt.Options();
 default_opts8.solver_name = solver_names{8};
 % default_opts8.settings_lpec.lpec_solver = 'Scholtes';
 

@@ -31,7 +31,7 @@ settings = HomotopySolverOptions();
 w_opt = full(result_scholtes.x);
 f_opt_scholtes = full(result_scholtes.f);
 % Pivoting
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.settings_lpec.lpec_solver = "Highs_casadi";
 solver_settings.initialization_strategy ="RelaxAndProject";
 solver_settings.relax_and_project_homotopy_parameter_steering = "Ell_inf";
@@ -40,7 +40,7 @@ solver_settings.consider_all_complementarities_in_lpec = true;
 % solver_settings.initialization_strategy ="TakeProvidedActiveSet";
 % solver_initalization.y0 = 0;
 
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 
 w_opt_active_set = full(result_active_set.x);

@@ -28,7 +28,7 @@ mpecs = genNonLinMPECfun(problem_set_name,settings);
 solver_names = ["MPEC armin",  'Scholtes direct']; % names of solvers (used for plotting) (strings)
 solver_functions = {@mpec_optimizer, @mpec_homotopy_solver};
 
-default_opts1 = MPECOptimizerOptions();
+default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
 default_opts1.initialization_strategy = 'RelaxAndProject';
 default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";

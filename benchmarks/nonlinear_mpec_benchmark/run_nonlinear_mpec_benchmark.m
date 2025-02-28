@@ -80,15 +80,15 @@ solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS",...
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
         @mpec_homotopy_solver,@mpec_homotopy_solver,@mpec_homotopy_solver};
 
-default_opts1 = MPECOptimizerOptions();
+default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
 
-default_opts2 = MPECOptimizerOptions();
+default_opts2 = mpecopt.Options();
 default_opts2.solver_name = solver_names{2};
 default_opts2.settings_lpec.lpec_solver = "Highs";
 default_opts2.rho_TR_phase_i_init = 1e-3;
 
-default_opts3 = MPECOptimizerOptions();
+default_opts3 = mpecopt.Options();
 default_opts3.solver_name = solver_names{3};
 default_opts3.relax_and_project_homotopy_parameter_steering = "Ell_1";
 

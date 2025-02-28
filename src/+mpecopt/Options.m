@@ -1,6 +1,6 @@
 % Copyright (c) 2024, Armin Nurkanović
 % TODO: allow passing no lbg ubg and assume g empty in this case; and vice versa
-classdef MPECOptimizerOptions < handle
+classdef Options < handle
     properties
         % General
         solver_name {mustBeTextScalar} = 'MPECopt';
@@ -112,7 +112,7 @@ classdef MPECOptimizerOptions < handle
     end
 
     methods
-        function obj = MPECOptimizerOptions()
+        function obj = Options()
             obj.settings_lpec = LPECSolverOptions();
             % obj.settings_lpec.solver_name = 'lpec_solver';
             % obj.settings_lpec.lpec_solver= LpecSolver.Gurobi;

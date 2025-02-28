@@ -45,7 +45,7 @@ f_opt_homotopy = full(result_homotopy.f);
 
 %% MPECopt
 % Solver settings
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 % change some settings
 solver_settings.settings_lpec.lpec_solver = 'Highs_casadi'  ; % 'Gurobi'; for best perfomance; 'Highs_casadi' - via CasADi conic
 solver_settings.settings_casadi_nlp.ipopt.linear_solver = 'mumps'; % 'ma27' for better perfomance
@@ -55,7 +55,7 @@ solver_settings.rho_TR_phase_ii_init = 1e-4;
 % Call solver
 % [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 % solve problem
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 

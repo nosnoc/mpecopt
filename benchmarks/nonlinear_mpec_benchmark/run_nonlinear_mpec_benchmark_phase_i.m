@@ -84,27 +84,27 @@ solver_names = solver_names_phase_i;
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
     @mpec_optimizer,@mpec_optimizer,@mpec_optimizer};
 
-default_opts1 = MPECOptimizerOptions();
+default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
 
-default_opts2 = MPECOptimizerOptions();
+default_opts2 = mpecopt.Options();
 default_opts2.solver_name = solver_names{2};
 default_opts2.bnlp_projection_strategy = "Simple";
 
-default_opts3 = MPECOptimizerOptions();
+default_opts3 = mpecopt.Options();
 default_opts3.solver_name = solver_names{3};
 default_opts3.relax_and_project_homotopy_parameter_steering = "Ell_inf";
 
-default_opts4 = MPECOptimizerOptions();
+default_opts4 = mpecopt.Options();
 default_opts4.solver_name = solver_names{4};
 default_opts4.relax_and_project_homotopy_parameter_steering = "Ell_1";
 
-default_opts5 = MPECOptimizerOptions();
+default_opts5 = mpecopt.Options();
 default_opts5.solver_name = solver_names{5};
 default_opts5.initialization_strategy = "FeasibilityEll1General";
 default_opts5.rho_TR_phase_i_init = 1e0;
 
-default_opts6 = MPECOptimizerOptions();
+default_opts6 = mpecopt.Options();
 default_opts6.solver_name = solver_names{6};
 default_opts6.initialization_strategy = "FeasibilityEllInfGeneral";
 default_opts6.rho_TR_phase_i_init = 1e0;

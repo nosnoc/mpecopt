@@ -38,14 +38,14 @@ f_opt_scholtes = full(result_scholtes.f);
 x_opt_scholtes = full(result_scholtes.x);
 
 % x0 = w_opt_scholtes;
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 % solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = true;
 solver_settings.tol_B_stationarity = 1e-8;
 solver_settings.rho_TR_phase_ii_init = 1e-2;
 % solver_initalization.x0 = x0;
 
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 
 

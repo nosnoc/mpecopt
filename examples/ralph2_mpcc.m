@@ -30,7 +30,7 @@ f_opt_homotopy = full(result_homotopy.f);
 x_opt_homotopy = full(result_homotopy.x);
 fprintf('x_opt = (%2.4f,%2.4f), f_opt = %2.4f. \n',x_opt_homotopy(1),x_opt_homotopy(2),f_opt_homotopy);
 %%  Settings
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.settings_lpec.lpec_solver ="Gurobi";
 % solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 % solver_settings.initialization_strategy = "RelaxAndProject";
@@ -44,7 +44,7 @@ solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ub
 % [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 
 
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 
 x_opt_active_set = full(result_active_set.x);
