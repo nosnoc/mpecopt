@@ -78,7 +78,7 @@ f_opt_homotopy = full(result_homotopy.f);
 % solver_initalization.w0 = w_opt;
 %% mpecopt
 fprintf('Problem info, n_w = %d, n_g = %d, n_comp = %d, name = %s\n', length(w),length(g),length(G),name)
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.settings_lpec.lpec_solver = 'Highs_casadi';
 
 [results,stats] = mpec_optimizer(mpec, solver_initalization, solver_settings);

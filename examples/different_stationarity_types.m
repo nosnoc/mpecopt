@@ -39,7 +39,7 @@ settings = HomotopySolverOptions();
 w_opt_reg = full(sol.x);
 f_opt_reg = full(sol.f);
 %%  mpecopt
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 % [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 

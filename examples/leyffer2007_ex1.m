@@ -31,7 +31,7 @@ settings = HomotopySolverOptions();
 w_opt = full(result_scholtes.x);
 f_opt_scholtes = full(result_scholtes.f);
 % Pivoting
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.settings_lpec.lpec_solver = "Highs_casadi";
 solver_settings.initialization_strategy ="RelaxAndProject";
 solver_settings.relax_and_project_homotopy_parameter_steering = "Ell_inf";

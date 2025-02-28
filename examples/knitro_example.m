@@ -45,7 +45,7 @@ g = [2*(x2-1)-1.5*x1+x3-0.5*x4+x5
 lbg = zeros(4,1);
 ubg = zeros(4,1);
 
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
 solver_settings.initialization_strategy = "FeasibilityEll1General";
 

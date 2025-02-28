@@ -30,7 +30,7 @@ x_opt = full(result_homotopy.x);
 f_opt_scholtes = full(result_homotopy.f);
 %%
 % Pivoting
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.settings_lpec.lpec_solver ="Highs";
 solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = 1; % indentifying the biactive set fails and wrong sol?

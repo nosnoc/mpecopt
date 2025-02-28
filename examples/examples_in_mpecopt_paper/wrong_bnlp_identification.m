@@ -41,7 +41,7 @@ fprintf('x_homotopy = (%2.4f,%2.4f), f_opt = %2.4f. \n',x_opt_homotopy(1),x_opt_
 
 tau0 = (settings.kappa)^(settings.max_iter-1)*tau0;
 %%
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 % solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
 % [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 % x_opt_active_set = full(result_active_set.x);

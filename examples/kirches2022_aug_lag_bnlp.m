@@ -63,7 +63,7 @@ f_opt_scholtes = full(result_scholtes.f);
 x_opt_scholtes = full(result_scholtes.x);
 
 % x0 = w_opt_scholtes;
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = true;
 solver_settings.settings_lpec.lpec_solver = "Projected_Gradient";  % for bound constraints, LPEC has explicit solution. 

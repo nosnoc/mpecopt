@@ -26,7 +26,7 @@ settings = HomotopySolverOptions();
 f_opt_homotopy = full(result_homotopy.f);
 w_opt_homotopy = full(result_homotopy.x);
 %%  Settings
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.consider_all_complementarities_in_lpec = false;
 solver_settings.plot_lpec_iterate = 1;
 % solver_settings.settings_lpec.lpec_solver = 'Ell_inf';

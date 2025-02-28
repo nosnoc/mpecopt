@@ -32,7 +32,7 @@ fprintf('x_opt = (%2.4f,%2.4f), f_opt = %2.4f. \n',w_opt_homotopy(1),w_opt_homot
 %%  Settings
 % x0 = [1/a;0];
 x0 = [1/a;0];
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.settings_lpec.lpec_solver ="Gurobi";
 solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
 solver_settings.consider_all_complementarities_in_lpec = 1;

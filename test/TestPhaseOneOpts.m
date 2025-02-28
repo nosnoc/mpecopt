@@ -40,7 +40,7 @@ classdef TestPhaseOneOpts < matlab.unittest.TestCase
             mpec = struct('x', w, 'f', f, 'g', g,'p',p,'G',G ,'H',H);
             solver_initalization = struct('x0', x0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg, 'ubg',ubg,'p0',1, 'y0', [0;1;1]);
 
-            opts = MPECOptimizerOptions();
+            opts = mpecopt.Options();
             opts.initialization_strategy = initialization_strategy;
             %opts.verbose_solver = false;
             %opts.verbose_summary = false;

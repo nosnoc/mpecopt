@@ -51,24 +51,24 @@ solver_names = ["Gurobi-MILP", "HiGHS-MILP",...
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
     @mpec_optimizer,@mpec_optimizer,@mpec_optimizer};
 
-default_opts1 = MPECOptimizerOptions();
+default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
 default_opts1.settings_lpec.lpec_solver = "Gurobi";
 
-default_opts2 = MPECOptimizerOptions();
+default_opts2 = mpecopt.Options();
 default_opts2.solver_name = solver_names{2};
 default_opts2.settings_lpec.lpec_solver = "Highs";
 default_opts2.rho_TR_phase_i_init = 1e-3;
 
-default_opts3 = MPECOptimizerOptions();
+default_opts3 = mpecopt.Options();
 default_opts3.solver_name = solver_names{3};
 default_opts3.settings_lpec.lpec_solver = "Reg";
 
-default_opts4 = MPECOptimizerOptions();
+default_opts4 = mpecopt.Options();
 default_opts4.solver_name = solver_names{4};
 default_opts4.settings_lpec.lpec_solver = "Ell_1";
 
-default_opts5 = MPECOptimizerOptions();
+default_opts5 = mpecopt.Options();
 default_opts5.solver_name = solver_names{5};
 default_opts5.settings_lpec.lpec_solver = "Ell_inf";
 

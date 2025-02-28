@@ -117,7 +117,7 @@ f_opt_homotopy = full(result_homotopy.f);
 % solver_initalization.w0 = w_opt_homotopy;
 % mpecopt
 fprintf('Problem info, n_w = %d, n_g = %d, n_comp = %d, name = %s\n', length(w),length(g),length(G),mpec_name)
-solver_settings = MPECOptimizerOptions();
+solver_settings = mpecopt.Options();
 solver_settings.plot_mpec_multipliers = true;
 % solver_settings.rho_TR_phase_i_init = 1e1;
 solver_settings.stop_if_S_stationary = 0;
