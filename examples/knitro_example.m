@@ -51,7 +51,7 @@ solver_settings.initialization_strategy = "FeasibilityEll1General";
 
 
  % [sol_active_set,stats_active_set]  = mpec_optimizer(mpec, solver_initalization, solver_settings);
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 [sol_active_set,stats_active_set] = solver.solve(solver_initalization);
 
 

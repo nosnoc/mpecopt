@@ -45,7 +45,7 @@ solver_settings.stop_if_S_stationary = 0;
 
 % [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 
 x_opt_active_set = full(result_active_set.x);

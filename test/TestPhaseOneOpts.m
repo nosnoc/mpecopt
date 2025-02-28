@@ -45,7 +45,7 @@ classdef TestPhaseOneOpts < matlab.unittest.TestCase
             %opts.verbose_solver = false;
             %opts.verbose_summary = false;
 
-            solver = Mpecopt(mpec, opts);
+            solver = mpecopt.Solver(mpec, opts);
             [sol,stats] = solver.solve(solver_initalization);
         end
     end

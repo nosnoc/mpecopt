@@ -40,7 +40,7 @@ solver_settings.consider_all_complementarities_in_lpec = true;
 % solver_settings.initialization_strategy ="TakeProvidedActiveSet";
 % solver_initalization.y0 = 0;
 
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 
 w_opt_active_set = full(result_active_set.x);

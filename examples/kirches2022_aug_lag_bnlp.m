@@ -71,7 +71,7 @@ solver_settings.settings_lpec.lpec_solver = "Projected_Gradient";  % for bound c
 solver_initalization.x0 = x0;
 % 
 % [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
-solver = Mpecopt(mpec, solver_settings);
+solver = mpecopt.Solver(mpec, solver_settings);
 % solve problem
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 

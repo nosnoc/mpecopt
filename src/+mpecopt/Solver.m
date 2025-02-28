@@ -1,4 +1,4 @@
-classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
+classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
     properties
         opts % all options of mpecopt
         mpec % casadi expressions defining the mpec/mpcc
@@ -10,7 +10,7 @@ classdef Mpecopt < handle & matlab.mixin.indexing.RedefinesParen
     end
 
     methods
-        function obj = Mpecopt(mpec, opts)
+        function obj = Solver(mpec, opts)
             t_prepare_mpec = tic;
             obj.opts = opts;
             obj.mpec = mpec;
