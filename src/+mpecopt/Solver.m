@@ -148,8 +148,10 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                             stats.iter.cpu_time_lpec_preparation_iter = [stats.iter.cpu_time_lpec_preparation_iter;toc(t_lpec_preparation_iter)];
                             %  Initial guess and TR for the LPEC
                             y_lpec_k_previous = y_lpec_k_l; % to keep track of active set chnages
-                            lpec.d_lpec = d_lpec_k_l;
-                            lpec.y_lpec = y_lpec_k_l; % inital guess for bin. variablels.
+                            if opts.warm_start_lpec_phase_i
+                                lpec.d_lpec = d_lpec_k_l;
+                                lpec.y_lpec = y_lpec_k_l; % inital guess for bin. variablels.
+                            end
 
                             rho_TR_k_l_lb = opts.realx_and_project_scale_factor_rho_tr*max(abs(min(x_k(dims.ind_x1),x_k(dims.ind_x2))));
                             rho_TR_k_l_ub = opts.realx_and_project_scale_factor_rho_tr*max(max(abs(x_k(dims.ind_x1)),abs(x_k(dims.ind_x2))));

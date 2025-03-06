@@ -55,8 +55,10 @@ while (k <= settings.max_iter) && ~stats.stopping_criterion_fullfiled
     while ~accept_trail_step && l_k <= settings.max_inner_iter && ~stats.stopping_criterion_fullfiled
         % Here one could do a fast_B_stationarity_check
         y_lpec_k_previous = y_lpec_k_l; % to keep track of active set chnages
-        %lpec.d_lpec = d_lpec_k_l; % Initial guess and TR for the LPEC
-        lpec.y_lpec = y_lpec_k_l; % inital guess for bin. variablels.
+        if settings.warm_start_lpec_phase_ii
+            lpec.d_lpec = d_lpec_k_l; % Initial guess and TR for the LPEC
+            lpec.y_lpec = y_lpec_k_l; % inital guess for bin. variablels.
+        end
         lpec.rho_TR = rho_TR_k_l; % update trust region
         stats.iter.rho_TR_iter = [stats.iter.rho_TR_iter, rho_TR_k_l]; % store TR radius
         % Solve LPEC
