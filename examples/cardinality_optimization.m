@@ -9,8 +9,8 @@ clear all; clc; close all
 import casadi.*
 
 %% Problem formulation
-n = 300; % number of variabples
-m = 150;
+n = 25; % number of variabples
+m = 10;
 A = rand(m,n);
 b = rand(m,1);
 c = 1-2*rand(n,1);
@@ -43,32 +43,44 @@ mpec = struct('x', w,'f',f,'g',g,'G',G,'H',H);
 solver_initalization = struct('x0', x0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg);
 settings = HomotopySolverOptions();
 settings.homotopy_parameter_steering = "Direct";
-[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings);
-f_opt_homotopy = full(result_homotopy.f);
-w_opt_homotopy = full(result_homotopy.x);
-%%  Settings
+[result_reg,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings);
+f_opt_reg = full(result_reg.f);
+w_opt_reg = full(result_reg.x);
+%%  mpecopt settings
 solver_settings = mpecopt.Options();
 % solver_settings.settings_lpec.lpec_solver = "Highs_casadi";
-% solver_settings.settings_lpec.lpec_solver = "Gurobi";
-solver_settings.rho_TR_phase_i_init = 1e-1;
-solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
-% solver_settings.initalization_strategy = "TakeInitialGuessDirectly";
+solver_settings.settings_lpec.lpec_solver = "Gurobi";
+% solver_settings.rho_TR_phase_i_init = 1e-1;
+% solver_settings.rho_TR_phase_ii_init = 1e-1;
+% solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
+% solver_settings.initialization_strategy = "FeasibilityEllInfGeneral";
 
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
+solver = mpecopt.Solver(mpec, solver_settings);
+[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+
+%
+solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
 [result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+% solver = mpecopt.Solver(mpec, solver_settings);
+
 %%
 w_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
+
+x_opt_active_set = w_opt_active_set(1:n);
+x_opt_reg = w_opt_reg(1:n);
+cardinality_active_set = sum(heaviside(abs(x_opt_active_set)-1e-3));
+cardinality_reg  = sum(heaviside(abs(x_opt_reg)-1e-3));
+
+fprintf('\n Cardinality reg: %d, Cardinality mpecopt: %d \n',cardinality_reg,cardinality_active_set)
 fprintf('\n-------------------------------------------------------------------------------\n');
 fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Sucess\t Stat. type\n')
 fprintf('-------------------------------------------------------------------------------\n');
-fprintf('homotopy \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
+fprintf('Reg \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_reg,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
 fprintf('Active Set \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_active_set,stats_active_set.comp_res,stats_active_set.n_biactive,stats_active_set.cpu_time_total,stats_active_set.success,stats_active_set.multiplier_based_stationarity)
 fprintf('-------------------------------------------------------------------------------\n');
-fprintf(' || w_homotopy - w_active_set || = %2.2e \n',norm(w_opt_homotopy-w_opt_active_set));
+fprintf(' || w_homotopy - w_active_set || = %2.2e \n',norm(w_opt_reg-w_opt_active_set));
 
-x_opt_active_set = w_opt_active_set(1:n);
-x_opt_homotopy = w_opt_homotopy(1:n);
+
 %%
-cardinality_active_set = sum(heaviside(abs(x_opt_active_set)-1e-3))
-cardinality_homotopy  = sum(heaviside(abs(x_opt_homotopy)-1e-3))

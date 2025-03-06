@@ -38,6 +38,7 @@ classdef Options < handle
         max_recovery_iters (1,1) double {mustBeReal, mustBeInteger} = 12; % If the current BNLP is infeasible, try to solve a tighet relaxation of the MPEC for a better feasible BNLP guess;
         bnlp_projection_strategy (1,1) BNLPProjectionStrategy = BNLPProjectionStrategy.LPEC; % chose how to project x_k(tau) onto complementarity set
         project_guess_to_bounds (1,1) logical = false; % project point to comps and simple bounds (might be still infeasible for general constraints)
+        warm_start_lpec_phase_i (1,1) logical = false; % if true, use latest lpec solution as initial guess (it may be infeasible)
         
 
         relax_and_project_iters (1,1) double {mustBeReal, mustBeInteger} = 1;
@@ -69,6 +70,7 @@ classdef Options < handle
         accept_last_inner_iter(1,1) logical = true; % if max number of inner iterations reached, accept step even if not sufficient decrees      
         smaller_tr_in_phase_ii (1,1) logical = false; % TODO: align with delta tr abooveonce feasiblity is reached, solve lpecs with a very small tr.
         reset_TR_radius (1,1) logical = true;
+        warm_start_lpec_phase_ii (1,1) logical = false; % if true, use latest lpec solution as initial guess (it may be infeasible)
     
         % ----- LPEC solver settings ----
         consider_all_complementarities_in_lpec(1,1) logical = true; % if true, take all comps into the lpec, if false take only those active at x^k
