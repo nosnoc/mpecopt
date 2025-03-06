@@ -807,7 +807,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_lift_x2 ,1)];
                 solver_initialization.x0 = [solver_initialization.x0;H_eval(dims.ind_nonscalar_x2)];
             end
-
+            solver_initialization.lbx(dims.ind_x1) = 0;
+            solver_initialization.lbx(dims.ind_x2) = 0;
             %% Split into equalites and inequalities
             % TODO@Anton?: Get rid of this unfold?
             x = mpec_casadi.x;
