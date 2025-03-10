@@ -7,9 +7,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
         dims % all problem dimensions and relevant index sets
         solver_initialization % solver initialization data, x0, lower and upper bounds of variables and constraints
         stats % solution statistics, mostly cpu times, and some qualitative solution information
-
-        nlp
-        nlp_metadata
     end
 
     methods
