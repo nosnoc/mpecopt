@@ -403,7 +403,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         solver_initialization_feas.y_lpec_k_l = y_lpec_k_l;
                         solver_initialization_feas.d_lpec_k_l = nan;
                         phase_ii = false;
-                        [solution_feas,stats_feas] = obj.phase_II(phase_ii);
+                        [solution_feas,stats_feas] = obj.phase_II(mpec_feas_casadi,lpec_feas_casadi,dims_feas,opts,solver_initialization_feas,stats,phase_ii);
                         s_k = solution_feas.x(1:n_slacks);
                         % get cpu times from phase i
                         stats.iter.cpu_time_lpec_phase_i_iter = stats_feas.iter.cpu_time_lpec_phase_i_iter;
@@ -610,7 +610,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 print_phase_ii();
                 print_iter_header();
             end
-            [solution,stats] = obj.phase_II(phase_ii);
+            [solution,stats] = obj.phase_II(mpec_casadi,lpec_casadi,dims,opts,solver_initialization,stats,phase_ii);
 
             if  stats.solved_in_phase_i
                 stats.cpu_time_phase_ii = 1e-10;
@@ -1287,6 +1287,9 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             stats.cpu_time_generate_nlp_solvers = toc(t_generate_nlp_solvers);
             mpec_casadi.solver = solver;
 
+            %% Generate scholtes
+            
+            
             %% Store structs
             obj.mpec_casadi = mpec_casadi;
             obj.dims = dims;
@@ -1335,18 +1338,15 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             obj.lpec_casadi = lpec_casadi;
         end
 
-        function [solution,stats] = phase_II(obj,phase_ii)
+        function [solution,stats] = phase_II(obj,mpec_casadi,lpec_casadi,dims,opts,solver_initialization,stats,phase_ii)
         % This function implements the Phase II algorithm of MPECppt.
-            opts = obj.opts;
-            mpec_casadi = obj.mpec_casadi;
-            lpec_casadi = obj.lpec_casadi;
-            dims = obj.dims;
-            solver_initialization = obj.solver_initialization;
-            stats = obj.stats;
             k = 1;
             n_cycles = 0;
             resolve_nlp = true;
-            x_k = solver_initalization.x0;
+            x_k = solver_initialization.x0;
+            p0 = solver_initialization.p0;
+            y_lpec_k_l = solver_initialization.y_lpec_k_l;
+            d_lpec_k_l = solver_initialization.d_lpec_k_l;
             if phase_ii
                 rho_TR_k_l = opts.rho_TR_phase_ii_init;
             else
@@ -1452,8 +1452,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         stats.iter.f_lpec = [stats.iter.f_lpec, f_lin_opt_k_l]; % store some stats
                                                                                 % --------------------------- set up piece NLP with new active set-------------------------
                         if opts.compute_bnlp_step && ~stats.stopping_criterion_fullfiled
-                            lbx_bnlp_k = lbx; ubx_bnlp_k = ubx;  % reset bounds of bnlp.
-                            lbg_tnlp_k = lbg; ubg_tnlp_k = ubg;
+                            lbx_bnlp_k = solver_initialization.lbx; ubx_bnlp_k = solver_initialization.ubx;  % reset bounds of bnlp.
+                            lbg_tnlp_k = solver_initialization.lbg; ubg_tnlp_k = solver_initialization.ubg;
                             % find_active_sets_tnlp
                             active_set_estimate_k = find_active_sets_piece_nlp(x_trail_lpec,nabla_f_k,y_lpec_k_l,dims,opts,opts.tol_active);
                             ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
@@ -1471,7 +1471,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                             % --------------------------- solve piece NLP -------------------------
                             if resolve_nlp
                                 t_nlp_start = tic;
-                                results_nlp = solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
+                                results_nlp = mpec_casadi.solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
                                 cpu_time_nlp_k_l = toc(t_nlp_start);
                                 x_trail_nlp = full(results_nlp.x);
                                 lambda_x_trail_nlp = full(results_nlp.lam_x);
@@ -1705,8 +1705,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             if (stats.success || k==opts.max_iter) && opts.compute_tnlp_stationary_point && phase_ii
                 % if ~strcmp(opts.piece_nlp_strategy,'TNLP')
                 % resolve TNLP for correct multipliers
-                lbx_bnlp_k = lbx; ubx_bnlp_k = ubx;  % reset bounds of bnlp.
-                lbg_tnlp_k = lbg; ubg_tnlp_k = ubg;
+                lbx_bnlp_k = solver_initialization.lbx; ubx_bnlp_k = solver_initialization.ubx;  % reset bounds of bnlp.
+                lbg_tnlp_k = solver_initialization.lbg; ubg_tnlp_k = solver_initialization.ubg;
                 initial_strategy = opts.piece_nlp_strategy;
                 opts.piece_nlp_strategy = 'TNLP'; % used to get tnlp active sets
                 nabla_f_k = full(mpec_casadi.nabla_f_fun(x_k,p0));
@@ -1718,7 +1718,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 opts.piece_nlp_strategy = initial_strategy;
                 % end
                 t_nlp_start = tic;
-                results_nlp = solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
+                results_nlp = mpec_casadi.solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
                 cpu_time_nlp_k_l = toc(t_nlp_start);
                 x_k_multi = full(results_nlp.x);
                 lambda_x_k = full(results_nlp.lam_x);
@@ -1753,8 +1753,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             catch
                 stats.n_active_ineq = nan;
                 stats.n_active_box = nan;
-                stats.n_box = sum(lbx~=ubx);
-                stats.n_box_simple = sum(lbx==ubx);
+                stats.n_box = sum(solver_initialization.lbx~=solver_initialization.ubx);
+                stats.n_box_simple = sum(solver_initialization.lbx==solver_initialization.ubx);
             end
         end
 
