@@ -395,11 +395,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         solver_initialization_feas.ubx  = [s_ub; solver_initialization.ubx];
                         solver_initialization_feas.x0 = [s0;solver_initialization.x0];
                         [mpec_feas_casadi, dims_feas, solver_initialization_feas] =  create_mpec_functions(mpec_feas,solver_initialization_feas,opts);
-                        dims_feas.n_slacks = n_slacks;
                         lpec_feas_casadi = create_lpec_functions(mpec_feas_casadi,dims_feas,opts,solver_initialization_feas);
                         solver_initialization_feas.y_lpec_k_l = y_lpec_k_l;
                         solver_initialization_feas.d_lpec_k_l = nan;
                         phase_ii = false;
+                        dims_feas.map_w = 1:dims_feas.n_primal_non_lifted;
+                        dims_feas.map_g = 1:length(mpec_feas_casadi.g);
                         [solution_feas,stats_feas] = obj.phase_II(mpec_feas_casadi,lpec_feas_casadi,dims_feas,opts,solver_initialization_feas,stats,phase_ii);
                         s_k = solution_feas.x(1:n_slacks);
                         % get cpu times from phase i
@@ -1126,7 +1127,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 end
                 %% Edit complementarity constraints
                 n_primal_non_lifted = length(x);
-                n_g_non_lifted = length_g;
+                n_g_non_lifted = length(g);
                 dims.ind_x = 1:n_primal_non_lifted;
                 dims.ind_g = 1:n_g_non_lifted;
                 dims.map_w = 1:n_primal_non_lifted;
@@ -1349,7 +1350,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             else
                 rho_TR_k_l = opts.rho_TR_phase_i_init;
                 rho_TR_k_l = max(rho_TR_k_l,2*max(abs(x_k)));
-                if full(h_comp_fun(x_k,p0)) > opts.tol_feasibility && ~opts.feasibility_project_to_bounds
+                if full(mpec_casadi.h_comp_fun(x_k,p0)) > opts.tol_feasibility && ~opts.feasibility_project_to_bounds
                     % Make sure that Phase I applied to feasbility MPECs has TR a large enough trust region to satisfiy inital comp. constraints;
                     rho_TR_init_lb = 2*max(abs(min((x_k(dims.ind_x1)),(x_k(dims.ind_x2)))));
                     % rho_TR_init_ub = 2*max(max(abs(x_k(dims.ind_x1)),abs(x_k(dims.ind_x2))));
@@ -1472,7 +1473,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                                 cpu_time_nlp_k_l = toc(t_nlp_start);
                                 x_trail_nlp = full(results_nlp.x);
                                 lambda_x_trail_nlp = full(results_nlp.lam_x);
-                                stats_nlp = solver.stats();
+                                stats_nlp = mpec_casadi.solver.stats();
                                 nlp_iters_k_l = stats_nlp.iter_count;
                                 h_comp_k_l = full(mpec_casadi.h_comp_fun(x_trail_nlp,p0));
                                 h_std_k_l = full(mpec_casadi.h_std_fun(x_trail_nlp,p0));
