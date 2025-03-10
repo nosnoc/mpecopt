@@ -7,13 +7,20 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
         dims % all problem dimensions and relevant index sets
         solver_initialization % solver initialization data, x0, lower and upper bounds of variables and constraints
         stats % solution statistics, mostly cpu times, and some qualitative solution information
+
+        nlp
+        nlp_metadata
     end
 
     methods
         function obj = Solver(mpec, opts)
             t_prepare_mpec = tic;
             obj.opts = opts;
-            obj.mpec = mpec;
+            if isa(mpec, 'vdx.problems.Mpcc')
+                obj.mpec = copy(mpec); % copy of mpec
+            else
+                obj.mpec = mpec;
+            end
             obj.create_mpec_functions();
             obj.solver_initialization = struct();
             obj.create_lpec_functions();
@@ -325,7 +332,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 end
                 y_lpec_k_l = abs(x_k(dims.ind_x1))>=abs(x_k(dims.ind_x2)); % inital guess for active set/binaries
                 tol_active_set = max(opts.tol_active,min(h_comp_ii,p0_relaxed(end)));
-
               case {'FeasibilityEllInfGeneral','FeasibilityEll1General'}
                 n_g = length(mpec_casadi.g);
                 % chekc if inital point already feasible
@@ -425,7 +431,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         fprintf('\n MPECopt: MPEC has only complementarity and bound constraints, feasible point found by projection to bounds.\n')
                     end
                 end
-
               case 'RandomActiveSet' % just take the user provided x0;
                                      % rng(1,"twister"); % to have reproducable problem sets
                 ii = 1;
@@ -505,7 +510,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 stats.iter.X_outer = [stats.iter.X_outer, x_k];
                 stats.n_nlp_total = stats.n_nlp_total + 1;
                 % stats.succes+p
-
               case 'TakeProvidedActiveSet'
                 if isfield(solver_initialization,'y0')
                     if isequal(length(solver_initialization.y0),dims.n_comp)
@@ -675,7 +679,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
     methods(Access=protected)
         function varargout = parenReference(obj, index_op)
-            % TODO(@anton) this returns mpccresults struct from homotopy
             import casadi.*;
             p = inputParser;
             addParameter(p, 'x0', []);
@@ -741,14 +744,14 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
         end
 
         function obj = parenAssign(obj,index_op,varargin)
-            % nosnoc.error('invalid', 'Invalid operation');
-            % TODO: there is no nosnoc in mpecopt - adjust errors messages
+        % nosnoc.error('invalid', 'Invalid operation');
+        % TODO: there is no nosnoc in mpecopt - adjust errors messages
             error('mpecopt: Invalid operation.')
         end
         
         function obj = parenDelete(obj,index_op)
-            % nosnoc.error('invalid', 'Invalid operation')
-            % TODO: there is no nosnoc in mpecopt - adjust errors messages
+        % nosnoc.error('invalid', 'Invalid operation')
+        % TODO: there is no nosnoc in mpecopt - adjust errors messages
             error('mpecopt: Invalid operation.')
         end
 
@@ -781,31 +784,45 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             end
 
             if opts.lift_complementarities_full
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_comp,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_comp,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_comp,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_comp,1)];
-                solver_initialization.x0 = [solver_initialization.x0;G_eval];
+                solver_initialization.lbx = zeros(dims.n_primal,1);
+                solver_initialization.lbx(dims.ind_x) = solver_initialization.lbx;
+                solver_initialization.lbx(dims.ind_x1) = 0;
+                solver_initialization.lbx(dims.ind_x2) = 0;
+                solver_initialization.ubx = zeros(dims.n_primal,1);
+                solver_initialization.ubx(dims.ind_x) = solver_initialization.ubx;
+                solver_initialization.ubx(dims.ind_x1) = inf;
+                solver_initialization.ubx(dims.ind_x2) = inf;
+                solver_initialization.lbg = zeros(dims.n_primal,1);
+                solver_initialization.lbg(dims.ind_g) = solver_initialization.lbg;
+                solver_initialization.ubg = zeros(dims.n_primal,1);
+                solver_initialization.ubg(dims.ind_g) = solver_initialization.ubg;
+                solver_initialization.x0 = zeros(dims.n_primal,1);
+                solver_initialization.x0(dims.ind_x) = solver_initialization.x0;
+                solver_initialization.x0(dims.ind_x1) = G_eval;
+                solver_initialization.x0(dims.ind_x2) = H_eval;
             else
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_lift_x1,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_lift_x1 ,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_lift_x1 ,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_lift_x1 ,1)];
-                solver_initialization.x0 = [solver_initialization.x0;G_eval(dims.ind_nonscalar_x1)];
-            end
+                lbx = solver_initialization.lbx;
+                solver_initialization.lbx = zeros(dims.n_primal,1);
+                solver_initialization.lbx(dims.ind_x) = lbx;
+                solver_initialization.lbx(dims.ind_x1) = 0;
+                solver_initialization.lbx(dims.ind_x2) = 0;
+                ubx = solver_initialization.ubx;
+                solver_initialization.ubx = zeros(dims.n_primal,1);
+                solver_initialization.ubx(dims.ind_x) = ubx;
+                solver_initialization.ubx(dims.ind_x1) = inf;
+                solver_initialization.ubx(dims.ind_x2) = inf;
+                lbg = solver_initialization.lbg;
+                solver_initialization.lbg = zeros(dims.n_g,1);
+                solver_initialization.lbg(dims.ind_g) = lbg;
+                ubg = solver_initialization.ubg;
+                solver_initialization.ubg = zeros(dims.n_g,1);
+                solver_initialization.ubg(dims.ind_g) = ubg;
+                x0 = solver_initialization.x0;
+                solver_initialization.x0 = zeros(dims.n_primal,1);
+                solver_initialization.x0(dims.ind_x) = x0;
+                solver_initialization.x0(dims.map_w(dims.ind_nonscalar_x1)) = G_eval(dims.ind_nonscalar_x1);
+                solver_initialization.x0(dims.map_w(dims.ind_nonscalar_x2)) = H_eval(dims.ind_nonscalar_x2);
 
-            if opts.lift_complementarities_full
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_comp,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_comp,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_comp,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_comp,1)];
-                solver_initialization.x0 = [solver_initialization.x0;H_eval];
-            else
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_lift_x2,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_lift_x2 ,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_lift_x2 ,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_lift_x2 ,1)];
-                solver_initialization.x0 = [solver_initialization.x0;H_eval(dims.ind_nonscalar_x2)];
             end
             solver_initialization.lbx(dims.ind_x1) = 0;
             solver_initialization.lbx(dims.ind_x2) = 0;
@@ -934,12 +951,166 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             % TODO(@anton) we need to choose one and stick to it.
             % TODO(@anton) Here we need to do interleaving again or do it in vdx.
             if isa(mpec, 'vdx.problems.Mpcc')
-                x = mpec.w.sym;
+                ind_nonscalar_x1 = [];
+                ind_nonscalar_x2 = [];
+                n_lift_x1 = 0;
+                n_lift_x2 = 0;
+                n_primal_non_lifted = length(mpec.w.sym);
+                n_g_non_lifted = length(mpec.g.sym);
+                % do lifting
+                comp_var_names = mpec.G.get_var_names();
+                G_fun = Function('G_fun',{mpec.w.sym,mpec.p.sym},{mpec.G.sym});
+                H_fun = Function('H_fun',{mpec.w.sym,mpec.p.sym},{mpec.H.sym});
+                sum_elastic = 0;
+                for ii=1:numel(comp_var_names)
+                    name = comp_var_names{ii};
+                    depth = mpec.G.(name).depth; % how many indices does this variable need?
+
+                    % If a 0 dimensional variable handle it specially.
+                    if depth == 0
+                        % Get the corresponding G and H expressions
+                        G_var = mpec.G.(name);
+                        H_var = mpec.H.(name);
+                        G_curr = mpec.G.(name)();
+                        H_curr = mpec.H.(name)();
+                        
+                        [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym);
+                        [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym);
+                                                
+                        mpec.w.([name '_G_lift']) = {{'G', length(ind_nonscalar_G)}, 0, inf};
+                        G_lift = G_curr(ind_nonscalar_G);
+                        G_curr(ind_nonscalar_G) = mpec.w.([name '_G_lift'])();
+                        G_var().sym = G_curr;
+                        
+                        mpec.w.([name '_H_lift']) = {{'H', length(ind_nonscalar_H)}, 0, inf};
+                        H_lift = H_curr(ind_nonscalar_H);
+                        H_curr(ind_nonscalar_H) = mpec.w.([name '_H_lift'])();
+                        H_var().sym = H_curr;
+                            
+                        mpec.g.([name '_G_lift']) = {mpec.w.([name '_G_lift'])()-G_lift};
+                        mpec.g.([name '_H_lift']) = {mpec.w.([name '_H_lift'])()-H_lift};
+
+                        ind_G = G_var.indices{1};
+                        ind_H = H_var.indices{1};
+                        ind_nonscalar_x1 = [ind_nonscalar_x1, ind_G(ind_nonscalar_G)];
+                        ind_nonscalar_x2 = [ind_nonscalar_x2, ind_H(ind_nonscalar_H)];
+                        n_lift_x1 = n_lift_x1 + length(ind_nonscalar_G);
+                        n_lift_x2 = n_lift_x2 + length(ind_nonscalar_H);
+                    else % Do the same behavior as before excep this time for each var(i,j,k,...) index for each variable 'var'.
+                         % Get indices that we will need to get all the casadi vars for the vdx.Variable
+                        indices = {};
+                        for len=size(mpec.G.(name).indices)
+                            indices = horzcat(indices, {1:len});
+                        end
+                        indices = indices(1:depth);
+                        % We subtract 1 to get the 0 indexing correct :)
+                        inorderlst = all_combinations(indices{:})-1;
+
+                        G_var = mpec.G.(name);
+                        H_var = mpec.H.(name);
+                        % Transfer each element of the vdx.Variable individually.
+                        for ii=1:size(inorderlst,1)
+                            curr = num2cell(inorderlst(ii,:));
+                            G_curr = mpec.G.(name)(curr{:});
+                            H_curr = mpec.H.(name)(curr{:});
+                            if any(size(G_curr) == 0)
+                                continue
+                            end
+
+                            % TODO(@anton) this is in an if for performance reasons not to call find_nonscalar many times
+                            %              however it is likely that this can be done in 1 shot?
+                            [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym);
+                            [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym);
+                            
+                            mpec.w.([name '_G_lift'])(curr{:}) = {{'G', length(ind_nonscalar_G)}, 0, inf};
+                            G_lift = G_curr(ind_nonscalar_G);
+                            G_curr(ind_nonscalar_G) = mpec.w.([name '_G_lift'])(curr{:});
+                            G_var(curr{:}).sym = G_curr;
+
+                            mpec.w.([name '_H_lift'])(curr{:}) = {{'H', length(ind_nonscalar_H)}, 0, inf};
+                            H_lift = H_curr(ind_nonscalar_H);
+                            H_curr(ind_nonscalar_H) = mpec.w.([name '_H_lift'])(curr{:});
+                            H_var(curr{:}).sym = H_curr;
+                            
+                            mpec.g.([name '_G_lift'])(curr{:}) = {mpec.w.([name '_G_lift'])(curr{:})-G_lift};
+                            mpec.g.([name '_H_lift'])(curr{:}) = {mpec.w.([name '_H_lift'])(curr{:})-H_lift};
+
+                            % NOTE: HAVE TO UNDO INDEXING
+                            curr_plus_one = num2cell(inorderlst(ii,:)+1);
+                            ind_G = G_var.indices{curr_plus_one{:}};
+                            ind_H = H_var.indices{curr_plus_one{:}};
+                            ind_nonscalar_x1 = [ind_nonscalar_x1, ind_G(ind_nonscalar_G)];
+                            ind_nonscalar_x2 = [ind_nonscalar_x2, ind_H(ind_nonscalar_H)];
+                            n_lift_x1 = n_lift_x1 + length(ind_nonscalar_G);
+                            n_lift_x2 = n_lift_x2 + length(ind_nonscalar_H);
+                            
+                            % if ~opts.assume_lower_bounds % Lower bounds on G, H, not already present in MPCC
+                            %     if ~opts.lift_complementarities
+                            %         if ~isempty(ind_nonscalar_G)
+                            %             mpec.g.([name '_G_lb'])(curr{:}) = {G_curr(ind_nonscalar_G), 0, inf};
+                            %         end
+                            %         if ~isempty(ind_nonscalar_H)
+                            %             mpec.g.([name '_H_lb'])(curr{:}) = {H_curr(ind_nonscalar_H), 0, inf};
+                            %         end
+                            %     end
+                            %     lbw = mpec.w.lb;
+                            %     lbw(ind_map_H) = 0;
+                            %     lbw(ind_map_G) = 0;
+                            %     mpec.w.lb = lbw;
+                            % end
+
+                            % TODO(@anton)
+                            %g_comp_expr = psi_fun(G_curr, H_curr, sigma);
+                            %[lb, ub, g_comp_expr] = generate_mpcc_relaxation_bounds(g_comp_expr, opts.relaxation_strategy);
+                            %mpec.g.(name)(curr{:}) = {g_comp_expr,lb,ub};
+                        end
+                    end
+                end
+                mpec.finalize_assignments();
+                new_w_indices = mpec.w.sort_by_index();
+                [~,new_map_w] = sort(new_w_indices);
+                new_g_indices = mpec.g.sort_by_index();
+                [~,new_map_g] = sort(new_g_indices);
+                ind_nonscalar_x1 = ind_nonscalar_x1;
+                ind_nonscalar_x2 = ind_nonscalar_x2;
+                dims.ind_x = new_map_w(1:n_primal_non_lifted);
+                dims.ind_g = new_map_g(1:n_g_non_lifted);
+                dims.map_w = new_map_w;
+                dims.map_g = new_map_g;
+
                 f = mpec.f;
+                x = mpec.w.sym;
                 g = mpec.g.sym;
+                p = mpec.p.sym;
                 G = mpec.G.sym;
                 H = mpec.H.sym;
-                p = mpec.p.sym;               
+
+                x1 = G;
+                x2 = H;
+                n_comp = length(x2);
+                
+                if n_comp > 0
+                    % TODO(@anton) do we actually need this here or can we calculate these "analytically"
+                    ind_x1 = [];
+                    ind_x2 = [];
+                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+                    [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
+                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
+                    [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
+                    opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
+                else
+                    opts.nlp_is_mpec = 0;
+                    ind_x1 = [];
+                    ind_x2 = [];
+                end
+                
+                n_primal = length(x);
+                n_primal_x0 = n_primal - 2*n_comp; % primal variables excluding the complementarity variables;
+                ind_x0 = [1:n_primal]';
+                if opts.nlp_is_mpec
+                    ind_x0([ind_x1,ind_x2]) = [];
+                end
+                x0 = x(ind_x0); % Variables not involved in complementarity constraints.
             else
                 try
                     x = mpec.x;
@@ -956,114 +1127,118 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 else
                     p = [];
                 end
-            end
+                %% Edit complementarity constraints
+                n_primal_non_lifted = length(x);
+                n_g_non_lifted = length_g;
+                dims.ind_x = 1:n_primal_non_lifted;
+                dims.ind_g = 1:n_g_non_lifted;
+                dims.map_w = 1:n_primal_non_lifted;
+                dims.map_g = 1:n_g_non_lifted;
+                n_comp = size(G,1);
+                G_fun = Function('G_fun',{x,p},{G});
+                H_fun = Function('H_fun',{x,p},{H});
 
-            %% Edit complementarity constraints
-            n_primal_non_lifted = length(x);
-            n_comp = size(G,1);
-            G_fun = Function('G_fun',{x,p},{G});
-            H_fun = Function('H_fun',{x,p},{H});
+                G_copy = G_fun(x,p);
+                H_copy = H_fun(x,p);
 
-            G_copy = G_fun(x,p);
-            H_copy = H_fun(x,p);
+                % check if the comps are expressions or just subvectors of w.
+                if opts.lift_complementarities_full
+                    % define lift vairables
+                    x1 = SX.sym('x1',n_comp);
+                    % update x and init guess
+                    x = [x;x1];
+                    % lift
+                    g = [g;x1-G];
+                else
+                    % lifting with only those that are not scaler
+                    % define lift vairables
+                    [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x);
+                    n_lift_x1 = length(ind_nonscalar_x1);
+                    if n_lift_x1 == 0
+                        % TODO(@anton) Figure out what this does.
+                        try
+                            x.jacobian(G_copy);
+                        catch
+                            n_lift_x1 = length(G_copy);
+                            ind_nonscalar_x1 = 1:n_lift_x1;
+                            ind_scalar = [];
+                        end
+                    end
+                    if n_lift_x1 > 0
+                        x1_lift = SX.sym('x1_lift',n_lift_x1);
+                        % x1 = [x(ind_scalar);x1_lift];
+                        % update x and init guess
+                        x = [x;x1_lift];
+                        % lift
+                        g = [g;x1_lift-G(ind_nonscalar_x1)];
 
-            % check if the comps are expressions or just subvectors of w.
-            if opts.lift_complementarities_full
-                % define lift vairables
-                x1 = SX.sym('x1',n_comp);
-                % update x and init guess
-                x = [x;x1];
-                % lift
-                g = [g;x1-G];
-            else
-                % lifting with only those that are not scaler
-                % define lift vairables
-                [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x);
-                n_lift_x1 = length(ind_nonscalar_x1);
-                if n_lift_x1 == 0
-                    % TODO(@anton) Figure out what this does.
-                    try
-                        x.jacobian(G_copy);
-                    catch
-                        n_lift_x1 = length(G_copy);
-                        ind_nonscalar_x1 = 1:n_lift_x1;
-                        ind_scalar = [];
+                        x1 = G_copy;
+                        x1(ind_nonscalar_x1) = x1_lift;
+                    else
+                        x1 = G;
                     end
                 end
-                if n_lift_x1 > 0
-                    x1_lift = SX.sym('x1_lift',n_lift_x1);
-                    % x1 = [x(ind_scalar);x1_lift];
+
+                if opts.lift_complementarities_full
+                    % define lift vairables
+                    x2 = SX.sym('x2',n_comp);
                     % update x and init guess
-                    x = [x;x1_lift];
+                    x = [x;x2];
                     % lift
-                    g = [g;x1_lift-G(ind_nonscalar_x1)];
-
-                    x1 = G_copy;
-                    x1(ind_nonscalar_x1) = x1_lift;
+                    g = [g;x2-H];
                 else
-                    x1 = G;
-                end
-            end
+                    % lifting with only those that are not scaler
+                    [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
+                    n_lift_x2 = length(ind_nonscalar_x2);
+                    if n_lift_x2 == 0
+                        % TODO(@anton) Figure out what this does.
+                        try
+                            x.jacobian(H_copy);
+                        catch
+                            n_lift_x2 = length(H_copy);
+                            ind_nonscalar_x2 = 1:n_lift_x2;
+                            ind_scalar = [];
+                        end
+                    end
+                    if n_lift_x2 > 0
+                        x2_lift = SX.sym('x2_lift',n_lift_x2);
+                        % x2 = [x(ind_scalar);x2_lift];
+                        % update x and init guess
+                        x = [x;x2_lift];
+                        % lift
+                        g = [g;x2_lift-H(ind_nonscalar_x2)];
 
-            if opts.lift_complementarities_full
-                % define lift vairables
-                x2 = SX.sym('x2',n_comp);
-                % update x and init guess
-                x = [x;x2];
-                % lift
-                g = [g;x2-H];
-            else
-                % lifting with only those that are not scaler
-                [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
-                n_lift_x2 = length(ind_nonscalar_x2);
-                if n_lift_x2 == 0
-                    % TODO(@anton) Figure out what this does.
-                    try
-                        x.jacobian(H_copy);
-                    catch
-                        n_lift_x2 = length(H_copy);
-                        ind_nonscalar_x2 = 1:n_lift_x2;
-                        ind_scalar = [];
+                        x2 = H_copy;
+                        x2(ind_nonscalar_x2) = x2_lift;
+                    else
+                        x2 = H;
                     end
                 end
-                if n_lift_x2 > 0
-                    x2_lift = SX.sym('x2_lift',n_lift_x2);
-                    % x2 = [x(ind_scalar);x2_lift];
-                    % update x and init guess
-                    x = [x;x2_lift];
-                    % lift
-                    g = [g;x2_lift-H(ind_nonscalar_x2)];
 
-                    x2 = H_copy;
-                    x2(ind_nonscalar_x2) = x2_lift;
+                % find index set
+                if n_comp > 0
+                    % TODO(@anton) do we actually need this here or can we calculate these "analytically"
+                    ind_x1 = [];
+                    ind_x2 = [];
+                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+                    [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
+                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
+                    [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
+                    opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
                 else
-                    x2 = H;
+                    opts.nlp_is_mpec = 0;
+                    ind_x1 = [];
+                    ind_x2 = [];
                 end
-            end
 
-            % find index set
-            if n_comp > 0
-                % TODO(@anton) do we actually need this here or can we calculate these "analytically"
-                ind_x1 = [];
-                ind_x2 = [];
-                ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
-                [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
-                ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
-                [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
-                opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
-            else
-                opts.nlp_is_mpec = 0;
-                ind_x1 = [];
-                ind_x2 = [];
+                n_primal = length(x);
+                n_primal_x0 = n_primal - 2*n_comp; % primal variables excluding the complementarity variables;
+                ind_x0 = [1:n_primal]';
+                if opts.nlp_is_mpec
+                    ind_x0([ind_x1,ind_x2]) = [];
+                end
+                x0 = x(ind_x0); % Variables not involved in complementarity constraints.
             end
-
-            n_primal = length(x);
-            n_primal_x0 = n_primal - 2*n_comp; % primal variables excluding the complementarity variables;
-            ind_x0 = [1:n_primal]';
-            if opts.nlp_is_mpec
-                ind_x0([ind_x1,ind_x2]) = [];
-            end
-            x0 = x(ind_x0); % Variables not involved in complementarity constraints.
             
             nabla_f = f.jacobian(x)';
             nabla_g = g.jacobian(x);
@@ -1094,10 +1269,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             dims.n_primal = n_primal;
             dims.n_comp = n_comp;
             dims.n_primal_non_lifted = n_primal_non_lifted;
+            dims.n_g_non_lifted = n_g_non_lifted;
             dims.n_lift_x1 = n_lift_x1;
             dims.n_lift_x2 = n_lift_x2;
             dims.n_auxiliary = dims.n_comp; % number of binary variables in LPEC
-
+            dims.n_g = length(g);
+            
             % indices for lifting
             dims.ind_nonscalar_x1 = ind_nonscalar_x1;
             dims.ind_nonscalar_x2 = ind_nonscalar_x2;
@@ -1157,5 +1334,33 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
             obj.lpec_casadi = lpec_casadi;
         end
+        
+    end
+end
+
+
+function X = all_combinations(varargin)
+    numSets = length(varargin);
+    for i=1:numSets,
+        thisSet = sort(varargin{i});
+        if ~isequal(prod(size(thisSet)),length(thisSet)),
+            nosnoc.error('combinations_not_vectors', 'All inputs must be vectors.')
+        end
+        if ~isnumeric(thisSet),
+            nosnoc.error('cominations_not_numeric','All inputs must be numeric.')
+        end
+        sizeThisSet(i) = length(thisSet);
+        varargin{i} = thisSet;
+    end
+    X = zeros(prod(sizeThisSet),numSets);
+    for i=1:size(X,1)
+        ixVect = cell(length(sizeThisSet),1);
+        [ixVect{:}] = ind2sub(flip(sizeThisSet),i);
+        ixVect = flip([ixVect{:}]);
+        vect = zeros(1, numSets);
+        for jj=1:numSets
+            vect(jj) = varargin{jj}(ixVect(jj));
+        end
+        X(i,:) = vect;
     end
 end
