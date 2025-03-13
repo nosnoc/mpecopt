@@ -695,17 +695,17 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             if ~isempty(p.Results.x0)
                 obj.solver_initialization.x0 = p.Results.x0;
             else
-                obj.solver_initialization.x0 = zeros(dims.n_x,1);
+                obj.solver_initialization.x0 = zeros(dims.n_primal,1);
             end
             if ~isempty(p.Results.lbx)
                 obj.solver_initialization.lbx = p.Results.lbx;
             else
-                obj.solver_initialization.lbx = -inf(dims.n_x,1);
+                obj.solver_initialization.lbx = -inf(dims.n_primal,1);
             end
             if ~isempty(p.Results.ubx)
                 obj.solver_initialization.ubx = p.Results.ubx;
             else
-                obj.solver_initialization.ubx = inf(dims.n_x,1);
+                obj.solver_initialization.ubx = inf(dims.n_primal,1);
             end
             if ~isempty(p.Results.lbg)
                 obj.solver_initialization.lbg = p.Results.lbg;
@@ -730,7 +730,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             if ~isempty(p.Results.lam_x0)
                 obj.solver_initialization.lam_x0 = p.Results.lam_x0;
             else
-                obj.solver_initialization.lam_x0 = zeros(dims.n_x, 1);
+                obj.solver_initialization.lam_x0 = zeros(dims.n_primal, 1);
             end
             if ~isempty(p.Results.y0)
                 obj.solver_initialization.y0 = p.Results.y0;
