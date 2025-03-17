@@ -93,8 +93,11 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             % ------------------ Prepare homotopy solver for Phase I -----------------------------
             if strcmp(opts.initialization_strategy,"RelaxAndProject")
                 t_generate_nlp_solvers = tic;
-                % TODO : input just mpec_casadi and solver_initialization
-                [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi.f,mpec_casadi.g,mpec_casadi.x,mpec_casadi.x1,mpec_casadi.x2,mpec_casadi.p,solver_initialization.lbx,solver_initialization.ubx,solver_initialization.lbg,solver_initialization.ubg,solver_initialization.p0,x_k,opts,dims);
+                % !!!! TODO : create_phase_i_nlp_solver_dev - SHOULD be a method and executed outside of the solution loops (PROBABLY it can be executed while creating mpec_casadi)
+                % (which should also be a class itself)
+                [solver_relaxed, solver_initialization_relaxed] = create_phase_i_nlp_solver_dev(mpec_casadi,solver_initialization,opts,dims);
+                % [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi.f,mpec_casadi.g,mpec_casadi.x,mpec_casadi.x1,mpec_casadi.x2,mpec_casadi.p,solver_initialization.lbx,solver_initialization.ubx,solver_initialization.lbg,solver_initialization.ubg,solver_initialization.p0,x_k,opts,dims);
+                x_k_init = solver_initialization_relaxed.x0;
                 stats.cpu_time_generate_nlp_solvers = stats.cpu_time_generate_nlp_solvers+toc(t_generate_nlp_solvers);
             end
 
@@ -105,13 +108,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             stats.iter.cpu_time_lpec_preparation_iter = [];
             stats.iter.cpu_time_nlp_iter = [0];
             stats.iter.cpu_time_globalization_iter = [];
-
-            %% Main piece NLP solver (BNLP or TNLP)
-            % t_generate_nlp_solvers = tic;
-            % nlp = struct('x', x,'f', f,'g', g,'p',p);
-            % solver = nlpsol('solver', 'ipopt', nlp, opts.settings_casadi_nlp);
-            % stats.cpu_time_generate_nlp_solvers = toc(t_generate_nlp_solvers);
-            % mpec_casadi.solver = solver;
 
             %%  ---------------------- Phase I - compute feasible point ------------------------
             if opts.verbose_solver
@@ -290,10 +286,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         break;
                     else
                         t_presolve_nlp_iter = tic;
-                        results_nlp = solver_relaxed('x0',x_k_init,'p',p0_relaxed,'lbx',lbx_relaxed,'ubx',ubx_relaxed,'lbg',lbg_relaxed,'ubg',ubg_relaxed);
+                        solver_initialization_relaxed.x0 = x_k_init;
+                        results_nlp = solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
+                        % results_nlp = solver_relaxed(solver_initialization_relaxed);  % this would need conversion of doubles in argument to DMs.
                         % Cpu times
                         cpu_time_presolve_nlp_ii = toc(t_presolve_nlp_iter);
-                        stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_presolve_nlp_ii ];
+                        stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_presolve_nlp_ii];
                         stats_nlp = solver_relaxed.stats();
                         nlp_iters_ii = stats_nlp.iter_count;
                         % Extract results and compute objective, infeasibility ect.
@@ -305,9 +303,9 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         stats.iter.X_outer = [stats.iter.X_outer, x_k(1:dims.n_primal)];
                         if opts.verbose_solver
                             if strcmp(opts.relax_and_project_homotopy_parameter_steering,"Direct")
-                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Reg)',nlp_iters_ii,stats_nlp.return_status,p0_relaxed(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
+                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Reg)',nlp_iters_ii,stats_nlp.return_status,solver_initialization_relaxed.p0(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
                             else
-                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Pen)',nlp_iters_ii,stats_nlp.return_status,p0_relaxed(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
+                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Pen)',nlp_iters_ii,stats_nlp.return_status,solver_initialization_relaxed.p0(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
                             end
                         end
                         if isequal(stats_nlp.return_status,'Infeasible_Problem_Detected')
@@ -320,7 +318,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                                 stats.solver_message = 'MPEC is locally infeasible.';
                             end
                         end
-                        p0_relaxed(end) = opts.relax_and_project_kappa*p0_relaxed(end);
+                        solver_initialization_relaxed.p0(end) = opts.relax_and_project_kappa*solver_initialization_relaxed.p0(end);
                         ii = ii+1;
                         x_k_init = x_k;
                         stats.n_nlp_total = stats.n_nlp_total+1;
@@ -328,7 +326,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     end
                 end
                 y_lpec_k_l = abs(x_k(dims.ind_x1))>=abs(x_k(dims.ind_x2)); % inital guess for active set/binaries
-                tol_active_set = max(opts.tol_active,min(h_comp_ii,p0_relaxed(end)));
+                tol_active_set = max(opts.tol_active,min(h_comp_ii,solver_initialization_relaxed.p0(end)));
               case {'FeasibilityEllInfGeneral','FeasibilityEll1General'}
                 n_g = length(mpec_casadi.g);
                 % chekc if inital point already feasible
@@ -578,7 +576,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         ubx_relaxed(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
                         ubx_relaxed(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
                         % solve TNLP
-                        results_nlp = solver_relaxed('x0',x_k_init,'p',p0_relaxed,'lbx',lbx_relaxed,'ubx',ubx_relaxed,'lbg',lbg_relaxed,'ubg',ubg_relaxed);
+                        solver_initialization_relaxed.x0 = x_k_init;
+                        results_nlp = solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
                         x_k = full(results_nlp.x);
                         x_k = x_k(1:dims.n_primal);
                         lambda_x_k = full(results_nlp.lam_x);
@@ -1529,7 +1528,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                                                 ubx_relaxed(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
                                                 ubx_relaxed(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
                                                 % solve TNLP
-                                                results_nlp = solver_relaxed('x0',x_k_init,'p',p0_relaxed,'lbx',lbx_relaxed,'ubx',ubx_relaxed,'lbg',lbg_relaxed,'ubg',ubg_relaxed);
+                                                solver_initialization_relaxed.x0 = x_k_init;
+                                                results_nlp = solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
                                                 x_k = full(results_nlp.x);
                                                 x_k = x_k(1:dims.n_primal);
                                                 lambda_x_k = full(results_nlp.lam_x);
