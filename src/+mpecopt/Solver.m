@@ -7,6 +7,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
         dims % all problem dimensions and relevant index sets
         solver_initialization % solver initialization data, x0, lower and upper bounds of variables and constraints
         stats % solution statistics, mostly cpu times, and some qualitative solution information
+        solver_relaxed % relaxed solver for phase one
     end
 
     methods
@@ -21,9 +22,15 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             obj.create_mpec_functions();
             obj.solver_initialization = struct();
             obj.create_lpec_functions();
-            
+
             cpu_time_prepare_mpec = toc(t_prepare_mpec);
             obj.stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
+
+            if strcmp(opts.initialization_strategy,"RelaxAndProject")
+                t_generate_nlp_solvers = tic;
+                obj.create_phase_i_solver();
+                stats.cpu_time_generate_nlp_solvers = toc(t_generate_nlp_solvers);
+            end
         end
 
         function [solution,stats] = solve(obj, solver_initialization)
@@ -92,13 +99,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
             % ------------------ Prepare homotopy solver for Phase I -----------------------------
             if strcmp(opts.initialization_strategy,"RelaxAndProject")
-                t_generate_nlp_solvers = tic;
-                % !!!! TODO : create_phase_i_nlp_solver_dev - SHOULD be a method and executed outside of the solution loops (PROBABLY it can be executed while creating mpec_casadi)
-                % (which should also be a class itself)
-                [solver_relaxed, solver_initialization_relaxed] = create_phase_i_nlp_solver_dev(mpec_casadi,solver_initialization,opts,dims);
-                % [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi.f,mpec_casadi.g,mpec_casadi.x,mpec_casadi.x1,mpec_casadi.x2,mpec_casadi.p,solver_initialization.lbx,solver_initialization.ubx,solver_initialization.lbg,solver_initialization.ubg,solver_initialization.p0,x_k,opts,dims);
+                solver_initialization_relaxed = obj.create_phase_i_solver_initialization();
                 x_k_init = solver_initialization_relaxed.x0;
-                stats.cpu_time_generate_nlp_solvers = stats.cpu_time_generate_nlp_solvers+toc(t_generate_nlp_solvers);
             end
 
             stats.iter.cpu_time_nlp_phase_i_iter = [0];
@@ -287,12 +289,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     else
                         t_presolve_nlp_iter = tic;
                         solver_initialization_relaxed.x0 = x_k_init;
-                        results_nlp = solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
+                        results_nlp = obj.solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
                         % results_nlp = solver_relaxed(solver_initialization_relaxed);  % this would need conversion of doubles in argument to DMs.
                         % Cpu times
                         cpu_time_presolve_nlp_ii = toc(t_presolve_nlp_iter);
                         stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_presolve_nlp_ii];
-                        stats_nlp = solver_relaxed.stats();
+                        stats_nlp = obj.solver_relaxed.stats();
                         nlp_iters_ii = stats_nlp.iter_count;
                         % Extract results and compute objective, infeasibility ect.
                         x_k = full(results_nlp.x);
@@ -1739,6 +1741,102 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             end
         end
 
+        function [solver_relaxed,solver_initialization_relaxed] = create_phase_i_solver(obj)
+            import casadi.*
+            % symbolics
+            dims = obj.dims;
+            sigma_relaxed = SX.sym('sigma_relaxed',1); 
+            x_relaxed = obj.mpec_casadi.x; 
+            x1 = obj.mpec_casadi.x1;
+            x2 = obj.mpec_casadi.x2;
+            f_relaxed = obj.mpec_casadi.f;
+            g = obj.mpec_casadi.g;
+            
+            % Parameters
+            p_relaxed = [obj.mpec_casadi.p;sigma_relaxed];  
+            
+
+            % relaxed complementarity constraints;
+            g_comp_relaxed = []; 
+            lbg_comp_relaxed = [];  
+            ubg_comp_relaxed = [];
+
+           
+
+            switch obj.opts.relax_and_project_homotopy_parameter_steering
+              case "Direct"
+                if obj.opts.relax_and_project_comps_aggregated
+                    g_comp_relaxed = x1'*x2-sigma_relaxed*dims.n_comp;
+                else
+                    g_comp_relaxed = x1.*x2-sigma_relaxed;
+                end
+              case "Ell_1"
+                f_relaxed = f_relaxed+(x1'*x2)*(sigma_relaxed)^(-1);
+              case "Ell_inf"
+                % x_k_relaxed = project_to_bounds(x_k_relaxed ,lbx,ubx,dims);
+                s_eleastic = SX.sym('s_eleastic',1);
+                f_relaxed = f_relaxed+(s_eleastic)*(sigma_relaxed)^(-1);
+                x_relaxed = [x_relaxed;s_eleastic];
+                if obj.opts.relax_and_project_comps_aggregated
+                    g_comp_relaxed = x1'*x2-s_eleastic*dims.n_comp;
+                else
+                    g_comp_relaxed = x1.*x2-s_eleastic;
+                end
+            end
+
+            g_relaxed = [g;g_comp_relaxed]; 
+
+
+            %% --------- create solver for Phase I -----------------------------------
+            nlp_relaxed = struct('x', x_relaxed,'f', f_relaxed,'g', g_relaxed,'p',p_relaxed);
+            obj.solver_relaxed = nlpsol('solver_relaxed', 'ipopt', nlp_relaxed, obj.opts.settings_casadi_nlp);
+        end
+
+        function [solver_initialization_relaxed] = create_phase_i_solver_initialization(obj)
+            solver_initialization = obj.solver_initialization;
+            dims = obj.dims;
+            x_k_relaxed = solver_initialization.x0;
+            p0_relaxed = [solver_initialization.p0; obj.opts.relax_and_project_sigma0];
+             % bounds
+            lbx_relaxed = solver_initialization.lbx; 
+            ubx_relaxed = solver_initialization.ubx;
+            lbg_relaxed = solver_initialization.lbg; 
+            ubg_relaxed = solver_initialization.ubg;
+
+            switch obj.opts.relax_and_project_homotopy_parameter_steering
+              case "Direct"
+                if obj.opts.relax_and_project_comps_aggregated
+                    lbg_comp_relaxed = -inf;
+                    ubg_comp_relaxed = 0;
+                else
+                    lbg_comp_relaxed = -inf*ones(dims.n_comp,1);
+                    ubg_comp_relaxed = 0*ones(dims.n_comp,1);
+                end
+              case "Ell_inf"
+                % x_k_relaxed = project_to_bounds(x_k_relaxed ,lbx,ubx,dims);
+                lbx_relaxed = [lbx_relaxed;0];
+                ubx_relaxed = [ubx_relaxed;max(10,obj.opts.relax_and_project_sigma0*10)];
+                x_k_relaxed = [x_k_relaxed;obj.opts.relax_and_project_sigma0];
+                if obj.opts.relax_and_project_comps_aggregated
+                    lbg_comp_relaxed = -inf;
+                    ubg_comp_relaxed = 0;
+                else
+                    lbg_comp_relaxed = -inf*ones(dims.n_comp,1);
+                    ubg_comp_relaxed = 0*ones(dims.n_comp,1);
+                end
+            end
+
+            lbg_relaxed = [lbg_relaxed;lbg_comp_relaxed]; 
+            ubg_relaxed = [ubg_relaxed;ubg_comp_relaxed];
+            % ind_comp = ind_comp:1:length(g_relaxed);
+            % Output solver initalization
+            solver_initialization_relaxed.x0 = x_k_relaxed;
+            solver_initialization_relaxed.lbx = lbx_relaxed;
+            solver_initialization_relaxed.ubx = ubx_relaxed;
+            solver_initialization_relaxed.lbg = lbg_relaxed;
+            solver_initialization_relaxed.ubg = ubg_relaxed;
+            solver_initialization_relaxed.p0 = p0_relaxed;
+        end
     end
 end
 
