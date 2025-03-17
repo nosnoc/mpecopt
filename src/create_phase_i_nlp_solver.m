@@ -1,5 +1,5 @@
-% function   [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(f,g,x,x1,x2,p,lbx,ubx,lbg,ubg,p0,x_k,settings,dims)
-function   [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi,lbx,ubx,lbg,ubg,p0,x_k,settings,dims)
+function   [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(f,g,x,x1,x2,p,lbx,ubx,lbg,ubg,p0,x_k,settings,dims)
+%function   [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi,lbx,ubx,lbg,ubg,p0,x_k,settings,dims)
 
 
 % Remark: This could also be done directly with the scholtes solver, however I do it explicitly to avoid the preprocess overhead.

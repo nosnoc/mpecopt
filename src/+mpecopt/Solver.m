@@ -781,42 +781,29 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             end
             map_w = dims.map_w;
             map_g = dims.map_g;
+            lbx = solver_initialization.lbx;
+            ubx = solver_initialization.ubx;
+            lbg = solver_initialization.lbg;
+            ubg = solver_initialization.ubg;
+            x0 = solver_initialization.x0;
+            solver_initialization.lbx = zeros(dims.n_primal,1);
+            solver_initialization.lbx(map_w(dims.ind_x)) = lbx;
+            solver_initialization.lbx(map_w(dims.ind_x1)) = 0;
+            solver_initialization.lbx(map_w(dims.ind_x2)) = 0;
+            solver_initialization.ubx = inf(dims.n_primal,1);
+            solver_initialization.ubx(map_w(dims.ind_x)) = ubx;
+            solver_initialization.lbg = zeros(dims.n_g,1);
+            solver_initialization.lbg(map_g(dims.ind_g)) = lbg;
+            solver_initialization.ubg = zeros(dims.n_g,1);
+            solver_initialization.ubg(map_g(dims.ind_g)) = ubg;
+            solver_initialization.x0 = zeros(dims.n_primal,1);
+            solver_initialization.x0(map_w(dims.ind_x)) = x0;
             if opts.lift_complementarities_full
-                solver_initialization.lbx = zeros(dims.n_primal,1);
-                solver_initialization.lbx(map_w(dims.ind_x)) = solver_initialization.lbx;
-                solver_initialization.lbx(map_w(dims.ind_x1)) = 0;
-                solver_initialization.lbx(map_w(dims.ind_x2)) = 0;
-                solver_initialization.ubx = inf(dims.n_primal,1);
-                solver_initialization.ubx(map_w(dims.ind_x)) = solver_initialization.ubx;
-                solver_initialization.lbg = zeros(dims.n_primal,1);
-                solver_initialization.lbg(map_g(dims.ind_g)) = solver_initialization.lbg;
-                solver_initialization.ubg = zeros(dims.n_primal,1);
-                solver_initialization.ubg(map_g(dims.ind_g)) = solver_initialization.ubg;
-                solver_initialization.x0 = zeros(dims.n_primal,1);
-                solver_initialization.x0(map_w(dims.ind_x)) = solver_initialization.x0;
                 solver_initialization.x0(map_w(dims.ind_x1)) = G_eval;
                 solver_initialization.x0(map_w(dims.ind_x2)) = H_eval;
             else
-                lbx = solver_initialization.lbx;
-                solver_initialization.lbx = zeros(dims.n_primal,1);
-                solver_initialization.lbx(map_w(dims.ind_x)) = lbx;
-                solver_initialization.lbx(map_w(dims.ind_x1)) = 0;
-                solver_initialization.lbx(map_w(dims.ind_x2)) = 0;
-                ubx = solver_initialization.ubx;
-                solver_initialization.ubx = inf(dims.n_primal,1);
-                solver_initialization.ubx(map_w(dims.ind_x)) = ubx;
-                lbg = solver_initialization.lbg;
-                solver_initialization.lbg = zeros(dims.n_g,1);
-                solver_initialization.lbg(map_g(dims.ind_g)) = lbg;
-                ubg = solver_initialization.ubg;
-                solver_initialization.ubg = zeros(dims.n_g,1);
-                solver_initialization.ubg(map_g(dims.ind_g)) = ubg;
-                x0 = solver_initialization.x0;
-                solver_initialization.x0 = zeros(dims.n_primal,1);
-                solver_initialization.x0(map_w(dims.ind_x)) = x0;
-                solver_initialization.x0(dims.map_w(dims.ind_nonscalar_x1)) = G_eval(dims.ind_nonscalar_x1);
-                solver_initialization.x0(dims.map_w(dims.ind_nonscalar_x2)) = H_eval(dims.ind_nonscalar_x2);
-
+                solver_initialization.x0(map_w(dims.ind_nonscalar_x1)) = G_eval(dims.ind_nonscalar_x1);
+                solver_initialization.x0(map_w(dims.ind_nonscalar_x2)) = H_eval(dims.ind_nonscalar_x2);
             end
             %% Split into equalites and inequalities
             % TODO@Anton?: Get rid of this unfold?
