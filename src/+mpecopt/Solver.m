@@ -7,19 +7,30 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
         dims % all problem dimensions and relevant index sets
         solver_initialization % solver initialization data, x0, lower and upper bounds of variables and constraints
         stats % solution statistics, mostly cpu times, and some qualitative solution information
+        solver_relaxed % relaxed solver for phase one
     end
 
     methods
         function obj = Solver(mpec, opts)
             t_prepare_mpec = tic;
             obj.opts = opts;
-            obj.mpec = mpec;
+            if isa(mpec, 'vdx.problems.Mpcc')
+                obj.mpec = copy(mpec); % copy of mpec
+            else
+                obj.mpec = mpec;
+            end
             obj.create_mpec_functions();
             obj.solver_initialization = struct();
             obj.create_lpec_functions();
-            
+
             cpu_time_prepare_mpec = toc(t_prepare_mpec);
             obj.stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
+
+            if strcmp(opts.initialization_strategy,"RelaxAndProject")
+                t_generate_nlp_solvers = tic;
+                obj.create_phase_i_solver();
+                stats.cpu_time_generate_nlp_solvers = toc(t_generate_nlp_solvers);
+            end
         end
 
         function [solution,stats] = solve(obj, solver_initialization)
@@ -88,10 +99,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
             % ------------------ Prepare homotopy solver for Phase I -----------------------------
             if strcmp(opts.initialization_strategy,"RelaxAndProject")
-                t_generate_nlp_solvers = tic;
-                % TODO : input just mpec_casadi and solver_initialization
-                [solver_relaxed,x_k_init,p0_relaxed,lbx_relaxed,ubx_relaxed,lbg_relaxed,ubg_relaxed] = create_phase_i_nlp_solver(mpec_casadi.f,mpec_casadi.g,mpec_casadi.x,mpec_casadi.x1,mpec_casadi.x2,mpec_casadi.p,solver_initialization.lbx,solver_initialization.ubx,solver_initialization.lbg,solver_initialization.ubg,solver_initialization.p0,x_k,opts,dims);
-                stats.cpu_time_generate_nlp_solvers = stats.cpu_time_generate_nlp_solvers+toc(t_generate_nlp_solvers);
+                solver_initialization_relaxed = obj.create_phase_i_solver_initialization();
+                x_k_init = solver_initialization_relaxed.x0;
             end
 
             stats.iter.cpu_time_nlp_phase_i_iter = [0];
@@ -101,13 +110,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             stats.iter.cpu_time_lpec_preparation_iter = [];
             stats.iter.cpu_time_nlp_iter = [0];
             stats.iter.cpu_time_globalization_iter = [];
-
-            %% Main piece NLP solver (BNLP or TNLP)
-            % t_generate_nlp_solvers = tic;
-            % nlp = struct('x', x,'f', f,'g', g,'p',p);
-            % solver = nlpsol('solver', 'ipopt', nlp, opts.settings_casadi_nlp);
-            % stats.cpu_time_generate_nlp_solvers = toc(t_generate_nlp_solvers);
-            % mpec_casadi.solver = solver;
 
             %%  ---------------------- Phase I - compute feasible point ------------------------
             if opts.verbose_solver
@@ -286,11 +288,13 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         break;
                     else
                         t_presolve_nlp_iter = tic;
-                        results_nlp = solver_relaxed('x0',x_k_init,'p',p0_relaxed,'lbx',lbx_relaxed,'ubx',ubx_relaxed,'lbg',lbg_relaxed,'ubg',ubg_relaxed);
+                        solver_initialization_relaxed.x0 = x_k_init;
+                        results_nlp = obj.solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
+                        % results_nlp = solver_relaxed(solver_initialization_relaxed);  % this would need conversion of doubles in argument to DMs.
                         % Cpu times
                         cpu_time_presolve_nlp_ii = toc(t_presolve_nlp_iter);
-                        stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_presolve_nlp_ii ];
-                        stats_nlp = solver_relaxed.stats();
+                        stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter;cpu_time_presolve_nlp_ii];
+                        stats_nlp = obj.solver_relaxed.stats();
                         nlp_iters_ii = stats_nlp.iter_count;
                         % Extract results and compute objective, infeasibility ect.
                         x_k = full(results_nlp.x);
@@ -301,9 +305,9 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         stats.iter.X_outer = [stats.iter.X_outer, x_k(1:dims.n_primal)];
                         if opts.verbose_solver
                             if strcmp(opts.relax_and_project_homotopy_parameter_steering,"Direct")
-                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Reg)',nlp_iters_ii,stats_nlp.return_status,p0_relaxed(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
+                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Reg)',nlp_iters_ii,stats_nlp.return_status,solver_initialization_relaxed.p0(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
                             else
-                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Pen)',nlp_iters_ii,stats_nlp.return_status,p0_relaxed(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
+                                print_iter_stats(1,ii,f_opt_ii,h_std_ii,h_comp_ii,'NLP (Pen)',nlp_iters_ii,stats_nlp.return_status,solver_initialization_relaxed.p0(end),norm(x_k_init-x_k),cpu_time_presolve_nlp_ii,1)
                             end
                         end
                         if isequal(stats_nlp.return_status,'Infeasible_Problem_Detected')
@@ -316,7 +320,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                                 stats.solver_message = 'MPEC is locally infeasible.';
                             end
                         end
-                        p0_relaxed(end) = opts.relax_and_project_kappa*p0_relaxed(end);
+                        solver_initialization_relaxed.p0(end) = opts.relax_and_project_kappa*solver_initialization_relaxed.p0(end);
                         ii = ii+1;
                         x_k_init = x_k;
                         stats.n_nlp_total = stats.n_nlp_total+1;
@@ -324,8 +328,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     end
                 end
                 y_lpec_k_l = abs(x_k(dims.ind_x1))>=abs(x_k(dims.ind_x2)); % inital guess for active set/binaries
-                tol_active_set = max(opts.tol_active,min(h_comp_ii,p0_relaxed(end)));
-
+                tol_active_set = max(opts.tol_active,min(h_comp_ii,solver_initialization_relaxed.p0(end)));
               case {'FeasibilityEllInfGeneral','FeasibilityEll1General'}
                 n_g = length(mpec_casadi.g);
                 % chekc if inital point already feasible
@@ -392,12 +395,13 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         solver_initialization_feas.ubx  = [s_ub; solver_initialization.ubx];
                         solver_initialization_feas.x0 = [s0;solver_initialization.x0];
                         [mpec_feas_casadi, dims_feas, solver_initialization_feas] =  create_mpec_functions(mpec_feas,solver_initialization_feas,opts);
-                        dims_feas.n_slacks = n_slacks;
                         lpec_feas_casadi = create_lpec_functions(mpec_feas_casadi,dims_feas,opts,solver_initialization_feas);
                         solver_initialization_feas.y_lpec_k_l = y_lpec_k_l;
                         solver_initialization_feas.d_lpec_k_l = nan;
                         phase_ii = false;
-                        [solution_feas,stats_feas] = mpecopt_phase_ii(mpec_feas_casadi,lpec_feas_casadi,dims_feas,opts,solver_initialization_feas,stats,phase_ii);
+                        dims_feas.map_w = 1:dims_feas.n_primal_non_lifted;
+                        dims_feas.map_g = 1:length(mpec_feas_casadi.g);
+                        [solution_feas,stats_feas] = obj.phase_II(mpec_feas_casadi,lpec_feas_casadi,dims_feas,opts,solver_initialization_feas,stats,phase_ii);
                         s_k = solution_feas.x(1:n_slacks);
                         % get cpu times from phase i
                         stats.iter.cpu_time_lpec_phase_i_iter = stats_feas.iter.cpu_time_lpec_phase_i_iter;
@@ -425,7 +429,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         fprintf('\n MPECopt: MPEC has only complementarity and bound constraints, feasible point found by projection to bounds.\n')
                     end
                 end
-
               case 'RandomActiveSet' % just take the user provided x0;
                                      % rng(1,"twister"); % to have reproducable problem sets
                 ii = 1;
@@ -505,7 +508,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 stats.iter.X_outer = [stats.iter.X_outer, x_k];
                 stats.n_nlp_total = stats.n_nlp_total + 1;
                 % stats.succes+p
-
               case 'TakeProvidedActiveSet'
                 if isfield(solver_initialization,'y0')
                     if isequal(length(solver_initialization.y0),dims.n_comp)
@@ -576,7 +578,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         ubx_relaxed(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
                         ubx_relaxed(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
                         % solve TNLP
-                        results_nlp = solver_relaxed('x0',x_k_init,'p',p0_relaxed,'lbx',lbx_relaxed,'ubx',ubx_relaxed,'lbg',lbg_relaxed,'ubg',ubg_relaxed);
+                        solver_initialization_relaxed.x0 = x_k_init;
+                        results_nlp = solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
                         x_k = full(results_nlp.x);
                         x_k = x_k(1:dims.n_primal);
                         lambda_x_k = full(results_nlp.lam_x);
@@ -606,7 +609,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 print_phase_ii();
                 print_iter_header();
             end
-            [solution,stats] = mpecopt_phase_ii(mpec_casadi,lpec_casadi,dims,opts,solver_initialization,stats,phase_ii);
+            [solution,stats] = obj.phase_II(mpec_casadi,lpec_casadi,dims,opts,solver_initialization,stats,phase_ii);
 
             if  stats.solved_in_phase_i
                 stats.cpu_time_phase_ii = 1e-10;
@@ -675,7 +678,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
     methods(Access=protected)
         function varargout = parenReference(obj, index_op)
-            % TODO(@anton) this returns mpccresults struct from homotopy
             import casadi.*;
             p = inputParser;
             addParameter(p, 'x0', []);
@@ -694,17 +696,17 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             if ~isempty(p.Results.x0)
                 obj.solver_initialization.x0 = p.Results.x0;
             else
-                obj.solver_initialization.x0 = zeros(dims.n_x,1);
+                obj.solver_initialization.x0 = zeros(dims.n_primal,1);
             end
             if ~isempty(p.Results.lbx)
                 obj.solver_initialization.lbx = p.Results.lbx;
             else
-                obj.solver_initialization.lbx = -inf(dims.n_x,1);
+                obj.solver_initialization.lbx = -inf(dims.n_primal,1);
             end
             if ~isempty(p.Results.ubx)
                 obj.solver_initialization.ubx = p.Results.ubx;
             else
-                obj.solver_initialization.ubx = inf(dims.n_x,1);
+                obj.solver_initialization.ubx = inf(dims.n_primal,1);
             end
             if ~isempty(p.Results.lbg)
                 obj.solver_initialization.lbg = p.Results.lbg;
@@ -729,7 +731,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             if ~isempty(p.Results.lam_x0)
                 obj.solver_initialization.lam_x0 = p.Results.lam_x0;
             else
-                obj.solver_initialization.lam_x0 = zeros(dims.n_x, 1);
+                obj.solver_initialization.lam_x0 = zeros(dims.n_primal, 1);
             end
             if ~isempty(p.Results.y0)
                 obj.solver_initialization.y0 = p.Results.y0;
@@ -741,14 +743,14 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
         end
 
         function obj = parenAssign(obj,index_op,varargin)
-            % nosnoc.error('invalid', 'Invalid operation');
-            % TODO: there is no nosnoc in mpecopt - adjust errors messages
+        % nosnoc.error('invalid', 'Invalid operation');
+        % TODO: there is no nosnoc in mpecopt - adjust errors messages
             error('mpecopt: Invalid operation.')
         end
         
         function obj = parenDelete(obj,index_op)
-            % nosnoc.error('invalid', 'Invalid operation')
-            % TODO: there is no nosnoc in mpecopt - adjust errors messages
+        % nosnoc.error('invalid', 'Invalid operation')
+        % TODO: there is no nosnoc in mpecopt - adjust errors messages
             error('mpecopt: Invalid operation.')
         end
 
@@ -779,36 +781,32 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 G_eval = full(mpec_casadi.G_fun(solver_initialization.x0, solver_initialization.p0));
                 H_eval = full(mpec_casadi.H_fun(solver_initialization.x0, solver_initialization.p0));
             end
-
+            map_w = dims.map_w;
+            map_g = dims.map_g;
+            lbx = solver_initialization.lbx;
+            ubx = solver_initialization.ubx;
+            lbg = solver_initialization.lbg;
+            ubg = solver_initialization.ubg;
+            x0 = solver_initialization.x0;
+            solver_initialization.lbx = zeros(dims.n_primal,1);
+            solver_initialization.lbx(map_w(dims.ind_x)) = lbx;
+            solver_initialization.lbx(map_w(dims.ind_x1)) = 0;
+            solver_initialization.lbx(map_w(dims.ind_x2)) = 0;
+            solver_initialization.ubx = inf(dims.n_primal,1);
+            solver_initialization.ubx(map_w(dims.ind_x)) = ubx;
+            solver_initialization.lbg = zeros(dims.n_g,1);
+            solver_initialization.lbg(map_g(dims.ind_g)) = lbg;
+            solver_initialization.ubg = zeros(dims.n_g,1);
+            solver_initialization.ubg(map_g(dims.ind_g)) = ubg;
+            solver_initialization.x0 = zeros(dims.n_primal,1);
+            solver_initialization.x0(map_w(dims.ind_x)) = x0;
             if opts.lift_complementarities_full
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_comp,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_comp,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_comp,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_comp,1)];
-                solver_initialization.x0 = [solver_initialization.x0;G_eval];
+                solver_initialization.x0(map_w(dims.ind_x1)) = G_eval;
+                solver_initialization.x0(map_w(dims.ind_x2)) = H_eval;
             else
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_lift_x1,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_lift_x1 ,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_lift_x1 ,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_lift_x1 ,1)];
-                solver_initialization.x0 = [solver_initialization.x0;G_eval(dims.ind_nonscalar_x1)];
+                solver_initialization.x0(map_w(dims.ind_nonscalar_x1)) = G_eval(dims.ind_nonscalar_x1);
+                solver_initialization.x0(map_w(dims.ind_nonscalar_x2)) = H_eval(dims.ind_nonscalar_x2);
             end
-
-            if opts.lift_complementarities_full
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_comp,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_comp,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_comp,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_comp,1)];
-                solver_initialization.x0 = [solver_initialization.x0;H_eval];
-            else
-                solver_initialization.lbx = [solver_initialization.lbx;0*ones(dims.n_lift_x2,1)];
-                solver_initialization.ubx = [solver_initialization.ubx;inf*ones(dims.n_lift_x2 ,1)];
-                solver_initialization.lbg = [solver_initialization.lbg;0*ones(dims.n_lift_x2 ,1)];
-                solver_initialization.ubg = [solver_initialization.ubg;0*ones(dims.n_lift_x2 ,1)];
-                solver_initialization.x0 = [solver_initialization.x0;H_eval(dims.ind_nonscalar_x2)];
-            end
-            solver_initialization.lbx(dims.ind_x1) = 0;
-            solver_initialization.lbx(dims.ind_x2) = 0;
             %% Split into equalites and inequalities
             % TODO@Anton?: Get rid of this unfold?
             x = mpec_casadi.x;
@@ -934,12 +932,166 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             % TODO(@anton) we need to choose one and stick to it.
             % TODO(@anton) Here we need to do interleaving again or do it in vdx.
             if isa(mpec, 'vdx.problems.Mpcc')
-                x = mpec.w.sym;
+                ind_nonscalar_x1 = [];
+                ind_nonscalar_x2 = [];
+                n_lift_x1 = 0;
+                n_lift_x2 = 0;
+                n_primal_non_lifted = length(mpec.w.sym);
+                n_g_non_lifted = length(mpec.g.sym);
+                % do lifting
+                comp_var_names = mpec.G.get_var_names();
+                G_fun = Function('G_fun',{mpec.w.sym,mpec.p.sym},{mpec.G.sym});
+                H_fun = Function('H_fun',{mpec.w.sym,mpec.p.sym},{mpec.H.sym});
+                sum_elastic = 0;
+                for ii=1:numel(comp_var_names)
+                    name = comp_var_names{ii};
+                    depth = mpec.G.(name).depth; % how many indices does this variable need?
+
+                    % If a 0 dimensional variable handle it specially.
+                    if depth == 0
+                        % Get the corresponding G and H expressions
+                        G_var = mpec.G.(name);
+                        H_var = mpec.H.(name);
+                        G_curr = mpec.G.(name)();
+                        H_curr = mpec.H.(name)();
+                        
+                        [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym);
+                        [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym);
+                                                
+                        mpec.w.([name '_G_lift']) = {{'G', length(ind_nonscalar_G)}, 0, inf};
+                        G_lift = G_curr(ind_nonscalar_G);
+                        G_curr(ind_nonscalar_G) = mpec.w.([name '_G_lift'])();
+                        G_var().sym = G_curr;
+                        
+                        mpec.w.([name '_H_lift']) = {{'H', length(ind_nonscalar_H)}, 0, inf};
+                        H_lift = H_curr(ind_nonscalar_H);
+                        H_curr(ind_nonscalar_H) = mpec.w.([name '_H_lift'])();
+                        H_var().sym = H_curr;
+                            
+                        mpec.g.([name '_G_lift']) = {mpec.w.([name '_G_lift'])()-G_lift};
+                        mpec.g.([name '_H_lift']) = {mpec.w.([name '_H_lift'])()-H_lift};
+
+                        ind_G = G_var.indices{1};
+                        ind_H = H_var.indices{1};
+                        ind_nonscalar_x1 = [ind_nonscalar_x1, ind_G(ind_nonscalar_G)];
+                        ind_nonscalar_x2 = [ind_nonscalar_x2, ind_H(ind_nonscalar_H)];
+                        n_lift_x1 = n_lift_x1 + length(ind_nonscalar_G);
+                        n_lift_x2 = n_lift_x2 + length(ind_nonscalar_H);
+                    else % Do the same behavior as before excep this time for each var(i,j,k,...) index for each variable 'var'.
+                         % Get indices that we will need to get all the casadi vars for the vdx.Variable
+                        indices = {};
+                        for len=size(mpec.G.(name).indices)
+                            indices = horzcat(indices, {1:len});
+                        end
+                        indices = indices(1:depth);
+                        % We subtract 1 to get the 0 indexing correct :)
+                        inorderlst = all_combinations(indices{:})-1;
+
+                        G_var = mpec.G.(name);
+                        H_var = mpec.H.(name);
+                        % Transfer each element of the vdx.Variable individually.
+                        for ii=1:size(inorderlst,1)
+                            curr = num2cell(inorderlst(ii,:));
+                            G_curr = mpec.G.(name)(curr{:});
+                            H_curr = mpec.H.(name)(curr{:});
+                            if any(size(G_curr) == 0)
+                                continue
+                            end
+
+                            % TODO(@anton) this is in an if for performance reasons not to call find_nonscalar many times
+                            %              however it is likely that this can be done in 1 shot?
+                            [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym);
+                            [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym);
+                            
+                            mpec.w.([name '_G_lift'])(curr{:}) = {{'G', length(ind_nonscalar_G)}, 0, inf};
+                            G_lift = G_curr(ind_nonscalar_G);
+                            G_curr(ind_nonscalar_G) = mpec.w.([name '_G_lift'])(curr{:});
+                            G_var(curr{:}).sym = G_curr;
+
+                            mpec.w.([name '_H_lift'])(curr{:}) = {{'H', length(ind_nonscalar_H)}, 0, inf};
+                            H_lift = H_curr(ind_nonscalar_H);
+                            H_curr(ind_nonscalar_H) = mpec.w.([name '_H_lift'])(curr{:});
+                            H_var(curr{:}).sym = H_curr;
+                            
+                            mpec.g.([name '_G_lift'])(curr{:}) = {mpec.w.([name '_G_lift'])(curr{:})-G_lift};
+                            mpec.g.([name '_H_lift'])(curr{:}) = {mpec.w.([name '_H_lift'])(curr{:})-H_lift};
+
+                            % NOTE: HAVE TO UNDO INDEXING
+                            curr_plus_one = num2cell(inorderlst(ii,:)+1);
+                            ind_G = G_var.indices{curr_plus_one{:}};
+                            ind_H = H_var.indices{curr_plus_one{:}};
+                            ind_nonscalar_x1 = [ind_nonscalar_x1, ind_G(ind_nonscalar_G)];
+                            ind_nonscalar_x2 = [ind_nonscalar_x2, ind_H(ind_nonscalar_H)];
+                            n_lift_x1 = n_lift_x1 + length(ind_nonscalar_G);
+                            n_lift_x2 = n_lift_x2 + length(ind_nonscalar_H);
+                            
+                            % if ~opts.assume_lower_bounds % Lower bounds on G, H, not already present in MPCC
+                            %     if ~opts.lift_complementarities
+                            %         if ~isempty(ind_nonscalar_G)
+                            %             mpec.g.([name '_G_lb'])(curr{:}) = {G_curr(ind_nonscalar_G), 0, inf};
+                            %         end
+                            %         if ~isempty(ind_nonscalar_H)
+                            %             mpec.g.([name '_H_lb'])(curr{:}) = {H_curr(ind_nonscalar_H), 0, inf};
+                            %         end
+                            %     end
+                            %     lbw = mpec.w.lb;
+                            %     lbw(ind_map_H) = 0;
+                            %     lbw(ind_map_G) = 0;
+                            %     mpec.w.lb = lbw;
+                            % end
+
+                            % TODO(@anton)
+                            %g_comp_expr = psi_fun(G_curr, H_curr, sigma);
+                            %[lb, ub, g_comp_expr] = generate_mpcc_relaxation_bounds(g_comp_expr, opts.relaxation_strategy);
+                            %mpec.g.(name)(curr{:}) = {g_comp_expr,lb,ub};
+                        end
+                    end
+                end
+                mpec.finalize_assignments();
+                new_w_indices = mpec.w.sort_by_index();
+                [~,new_map_w] = sort(new_w_indices);
+                new_g_indices = mpec.g.sort_by_index();
+                [~,new_map_g] = sort(new_g_indices);
+                ind_nonscalar_x1 = ind_nonscalar_x1;
+                ind_nonscalar_x2 = ind_nonscalar_x2;
+                dims.ind_x = new_map_w(1:n_primal_non_lifted);
+                dims.ind_g = new_map_g(1:n_g_non_lifted);
+                dims.map_w = new_map_w;
+                dims.map_g = new_map_g;
+
                 f = mpec.f;
+                x = mpec.w.sym;
                 g = mpec.g.sym;
+                p = mpec.p.sym;
                 G = mpec.G.sym;
                 H = mpec.H.sym;
-                p = mpec.p.sym;               
+
+                x1 = G;
+                x2 = H;
+                n_comp = length(x2);
+                
+                if n_comp > 0
+                    % TODO(@anton) do we actually need this here or can we calculate these "analytically"
+                    ind_x1 = [];
+                    ind_x2 = [];
+                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+                    [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
+                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
+                    [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
+                    opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
+                else
+                    opts.nlp_is_mpec = 0;
+                    ind_x1 = [];
+                    ind_x2 = [];
+                end
+                
+                n_primal = length(x);
+                n_primal_x0 = n_primal - 2*n_comp; % primal variables excluding the complementarity variables;
+                ind_x0 = [1:n_primal]';
+                if opts.nlp_is_mpec
+                    ind_x0([ind_x1,ind_x2]) = [];
+                end
+                x0 = x(ind_x0); % Variables not involved in complementarity constraints.
             else
                 try
                     x = mpec.x;
@@ -956,114 +1108,114 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 else
                     p = [];
                 end
-            end
+                %% Edit complementarity constraints
+                n_primal_non_lifted = length(x);
+                n_g_non_lifted = length(g);
+                n_comp = size(G,1);
+                G_fun = Function('G_fun',{x,p},{G});
+                H_fun = Function('H_fun',{x,p},{H});
 
-            %% Edit complementarity constraints
-            n_primal_non_lifted = length(x);
-            n_comp = size(G,1);
-            G_fun = Function('G_fun',{x,p},{G});
-            H_fun = Function('H_fun',{x,p},{H});
+                G_copy = G_fun(x,p);
+                H_copy = H_fun(x,p);
 
-            G_copy = G_fun(x,p);
-            H_copy = H_fun(x,p);
+                % check if the comps are expressions or just subvectors of w.
+                if opts.lift_complementarities_full
+                    % define lift vairables
+                    x1 = SX.sym('x1',n_comp);
+                    % update x and init guess
+                    x = [x;x1];
+                    % lift
+                    g = [g;x1-G];
+                else
+                    % lifting with only those that are not scaler
+                    % define lift vairables
+                    [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x);
+                    n_lift_x1 = length(ind_nonscalar_x1);
+                    if n_lift_x1 == 0
+                        % TODO(@anton) Figure out what this does.
+                        try
+                            x.jacobian(G_copy);
+                        catch
+                            n_lift_x1 = length(G_copy);
+                            ind_nonscalar_x1 = 1:n_lift_x1;
+                            ind_scalar = [];
+                        end
+                    end
+                    if n_lift_x1 > 0
+                        x1_lift = SX.sym('x1_lift',n_lift_x1);
+                        % x1 = [x(ind_scalar);x1_lift];
+                        % update x and init guess
+                        x = [x;x1_lift];
+                        % lift
+                        g = [g;x1_lift-G(ind_nonscalar_x1)];
 
-            % check if the comps are expressions or just subvectors of w.
-            if opts.lift_complementarities_full
-                % define lift vairables
-                x1 = SX.sym('x1',n_comp);
-                % update x and init guess
-                x = [x;x1];
-                % lift
-                g = [g;x1-G];
-            else
-                % lifting with only those that are not scaler
-                % define lift vairables
-                [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x);
-                n_lift_x1 = length(ind_nonscalar_x1);
-                if n_lift_x1 == 0
-                    % TODO(@anton) Figure out what this does.
-                    try
-                        x.jacobian(G_copy);
-                    catch
-                        n_lift_x1 = length(G_copy);
-                        ind_nonscalar_x1 = 1:n_lift_x1;
-                        ind_scalar = [];
+                        x1 = G_copy;
+                        x1(ind_nonscalar_x1) = x1_lift;
+                    else
+                        x1 = G;
                     end
                 end
-                if n_lift_x1 > 0
-                    x1_lift = SX.sym('x1_lift',n_lift_x1);
-                    % x1 = [x(ind_scalar);x1_lift];
+
+                if opts.lift_complementarities_full
+                    % define lift vairables
+                    x2 = SX.sym('x2',n_comp);
                     % update x and init guess
-                    x = [x;x1_lift];
+                    x = [x;x2];
                     % lift
-                    g = [g;x1_lift-G(ind_nonscalar_x1)];
-
-                    x1 = G_copy;
-                    x1(ind_nonscalar_x1) = x1_lift;
+                    g = [g;x2-H];
                 else
-                    x1 = G;
-                end
-            end
+                    % lifting with only those that are not scaler
+                    [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
+                    n_lift_x2 = length(ind_nonscalar_x2);
+                    if n_lift_x2 == 0
+                        % TODO(@anton) Figure out what this does.
+                        try
+                            x.jacobian(H_copy);
+                        catch
+                            n_lift_x2 = length(H_copy);
+                            ind_nonscalar_x2 = 1:n_lift_x2;
+                            ind_scalar = [];
+                        end
+                    end
+                    if n_lift_x2 > 0
+                        x2_lift = SX.sym('x2_lift',n_lift_x2);
+                        % x2 = [x(ind_scalar);x2_lift];
+                        % update x and init guess
+                        x = [x;x2_lift];
+                        % lift
+                        g = [g;x2_lift-H(ind_nonscalar_x2)];
 
-            if opts.lift_complementarities_full
-                % define lift vairables
-                x2 = SX.sym('x2',n_comp);
-                % update x and init guess
-                x = [x;x2];
-                % lift
-                g = [g;x2-H];
-            else
-                % lifting with only those that are not scaler
-                [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
-                n_lift_x2 = length(ind_nonscalar_x2);
-                if n_lift_x2 == 0
-                    % TODO(@anton) Figure out what this does.
-                    try
-                        x.jacobian(H_copy);
-                    catch
-                        n_lift_x2 = length(H_copy);
-                        ind_nonscalar_x2 = 1:n_lift_x2;
-                        ind_scalar = [];
+                        x2 = H_copy;
+                        x2(ind_nonscalar_x2) = x2_lift;
+                    else
+                        x2 = H;
                     end
                 end
-                if n_lift_x2 > 0
-                    x2_lift = SX.sym('x2_lift',n_lift_x2);
-                    % x2 = [x(ind_scalar);x2_lift];
-                    % update x and init guess
-                    x = [x;x2_lift];
-                    % lift
-                    g = [g;x2_lift-H(ind_nonscalar_x2)];
 
-                    x2 = H_copy;
-                    x2(ind_nonscalar_x2) = x2_lift;
+                % find index set
+                if n_comp > 0
+                    % TODO(@anton) do we actually need this here or can we calculate these "analytically"
+                    ind_x1 = [];
+                    ind_x2 = [];
+                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+                    [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
+                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
+                    [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
+                    opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
                 else
-                    x2 = H;
+                    opts.nlp_is_mpec = 0;
+                    ind_x1 = [];
+                    ind_x2 = [];
                 end
-            end
 
-            % find index set
-            if n_comp > 0
-                % TODO(@anton) do we actually need this here or can we calculate these "analytically"
-                ind_x1 = [];
-                ind_x2 = [];
-                ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
-                [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
-                ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
-                [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
-                opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
-            else
-                opts.nlp_is_mpec = 0;
-                ind_x1 = [];
-                ind_x2 = [];
+                n_primal = length(x);
+                n_primal_x0 = n_primal - 2*n_comp; % primal variables excluding the complementarity variables;
+                ind_x0 = [1:n_primal]';
+                if opts.nlp_is_mpec
+                    ind_x0([ind_x1,ind_x2]) = [];
+                end
+                x0 = x(ind_x0); % Variables not involved in complementarity constraints.
             end
-
-            n_primal = length(x);
-            n_primal_x0 = n_primal - 2*n_comp; % primal variables excluding the complementarity variables;
-            ind_x0 = [1:n_primal]';
-            if opts.nlp_is_mpec
-                ind_x0([ind_x1,ind_x2]) = [];
-            end
-            x0 = x(ind_x0); % Variables not involved in complementarity constraints.
             
             nabla_f = f.jacobian(x)';
             nabla_g = g.jacobian(x);
@@ -1087,6 +1239,11 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             mpec_casadi.nabla_g_fun = Function('nabla_g_fun',{x,p},{nabla_g});
 
             %% Store some dimensions
+            n_g = length(g);
+            dims.ind_x = 1:n_primal_non_lifted;
+            dims.ind_g = 1:n_g_non_lifted;
+            dims.map_w = 1:n_primal;
+            dims.map_g = 1:n_g;
             dims.n_slacks = 0; % in generla no slacks, except in feasiblity problems
             dims.ind_x0 = ind_x0;
             dims.ind_x1 = ind_x1;
@@ -1094,10 +1251,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             dims.n_primal = n_primal;
             dims.n_comp = n_comp;
             dims.n_primal_non_lifted = n_primal_non_lifted;
+            dims.n_g_non_lifted = n_g_non_lifted;
             dims.n_lift_x1 = n_lift_x1;
             dims.n_lift_x2 = n_lift_x2;
             dims.n_auxiliary = dims.n_comp; % number of binary variables in LPEC
-
+            dims.n_g = n_g;
+            
             % indices for lifting
             dims.ind_nonscalar_x1 = ind_nonscalar_x1;
             dims.ind_nonscalar_x2 = ind_nonscalar_x2;
@@ -1110,6 +1269,9 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             stats.cpu_time_generate_nlp_solvers = toc(t_generate_nlp_solvers);
             mpec_casadi.solver = solver;
 
+            %% Generate scholtes
+            
+            
             %% Store structs
             obj.mpec_casadi = mpec_casadi;
             obj.dims = dims;
@@ -1157,5 +1319,550 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
             obj.lpec_casadi = lpec_casadi;
         end
+
+        function [solution,stats] = phase_II(obj,mpec_casadi,lpec_casadi,dims,opts,solver_initialization,stats,phase_ii)
+        % This function implements the Phase II algorithm of MPECppt.
+            k = 1;
+            n_cycles = 0;
+            resolve_nlp = true;
+            x_k = solver_initialization.x0;
+            p0 = solver_initialization.p0;
+            y_lpec_k_l = solver_initialization.y_lpec_k_l;
+            d_lpec_k_l = solver_initialization.d_lpec_k_l;
+            if phase_ii
+                rho_TR_k_l = opts.rho_TR_phase_ii_init;
+            else
+                rho_TR_k_l = opts.rho_TR_phase_i_init;
+                rho_TR_k_l = max(rho_TR_k_l,2*max(abs(x_k)));
+                if full(mpec_casadi.h_comp_fun(x_k,p0)) > opts.tol_feasibility && ~opts.feasibility_project_to_bounds
+                    % Make sure that Phase I applied to feasbility MPECs has TR a large enough trust region to satisfiy inital comp. constraints;
+                    rho_TR_init_lb = 2*max(abs(min((x_k(dims.ind_x1)),(x_k(dims.ind_x2)))));
+                    % rho_TR_init_ub = 2*max(max(abs(x_k(dims.ind_x1)),abs(x_k(dims.ind_x2))));
+                    rho_TR_k_l = max(rho_TR_k_l,rho_TR_init_lb);
+                end
+            end
+            % Check if problem infeasible, then add proper TR that allows feasiblity;
+            if phase_ii
+                t_phase_ii_start = tic;
+            end
+            % --------------------------- major (outer) itrations -------------------------------------------
+            while (k <= opts.max_iter) && ~stats.stopping_criterion_fullfiled
+                l_k = 1;  % minor/inner iter counter in k-th major/outer iteration
+                n_nlp_k = 0; n_lpec_k = 0; % lpecs/nlps solved in iteration k
+                accept_trail_step = false;
+                if opts.reset_TR_radius && k > 1 
+                    if phase_ii
+                        rho_TR_k_l = opts.rho_TR_phase_ii_init;
+                    else
+                        rho_TR_k_l = opts.rho_TR_phase_i_init;
+                    end
+                else
+                    rho_TR_k_l = min(rho_TR_k_l, opts.rho_TR_max); % initalize TR for inner loop
+                end
+
+                f_k  = full(mpec_casadi.f_fun(x_k,p0));
+                h_comp_k_l = full(mpec_casadi.h_comp_fun(x_k,p0));
+                h_std_k_l = full(mpec_casadi.h_std_fun(x_k,p0));
+                f_opt_k_l = full(mpec_casadi.f_fun(x_k,p0));
+                nabla_f_k  = full(mpec_casadi.nabla_f_fun(x_k,p0));
+                if norm(nabla_f_k) >= 1e2 && opts.rescale_large_objective_gradients
+                    nabla_f_k = nabla_f_k./(norm(nabla_f_k));
+                    lpec.f = nabla_f_k;
+                end
+                t_lpec_preparation_iter = tic;
+                lpec = create_lpec_subproblem(x_k,p0,rho_TR_k_l,lpec_casadi,dims,opts,opts.tol_active);
+                stats.iter.cpu_time_lpec_preparation_iter = [stats.iter.cpu_time_lpec_preparation_iter;toc(t_lpec_preparation_iter)];
+
+                % --------------------------- Inner (minor) itrations ------------------------------------------
+                while ~accept_trail_step && l_k <= opts.max_inner_iter && ~stats.stopping_criterion_fullfiled
+                    % Here one could do a fast_B_stationarity_check
+                    y_lpec_k_previous = y_lpec_k_l; % to keep track of active set chnages
+                    if opts.warm_start_lpec_phase_ii
+                        lpec.d_lpec = d_lpec_k_l; % Initial guess and TR for the LPEC
+                        lpec.y_lpec = y_lpec_k_l; % inital guess for bin. variablels.
+                    end
+                    lpec.rho_TR = rho_TR_k_l; % update trust region
+                    stats.iter.rho_TR_iter = [stats.iter.rho_TR_iter, rho_TR_k_l]; % store TR radius
+                                                                                   % Solve LPEC
+                    [results_lpec,stats_lpec] = lpec_solver(lpec,opts.settings_lpec);
+                    if ~phase_ii
+                        stats.iter.cpu_time_lpec_phase_i_iter = [stats.iter.cpu_time_lpec_phase_i_iter, stats_lpec.cpu_time]; % stats
+                    else
+                        stats.iter.cpu_time_lpec_phase_ii_iter = [stats.iter.cpu_time_lpec_phase_ii_iter, stats_lpec.cpu_time]; % stats
+                    end
+                    n_lpec_k = n_lpec_k + 1; stats.n_lpec_total = stats.n_lpec_total + 1;
+                    % extract LPEC results
+                    lpec_solution_exists = stats_lpec.lpec_solution_exists;
+                    d_lpec_k_l = results_lpec.d_lpec;
+                    y_lpec_k_l = results_lpec.y_lpec;
+                    f_lin_opt_k_l = results_lpec.f_opt;
+                    stats.f_lpec = results_lpec.f_opt; 
+                    x_trail_lpec = x_k + d_lpec_k_l;
+                    % Infeasiblity check
+                    h_comp_lpec_k_l = full(mpec_casadi.h_comp_fun(x_trail_lpec,p0));
+                    h_std_lpec_k_l = full(mpec_casadi.h_std_fun(x_trail_lpec,p0));
+                    if opts.verbose_solver
+                        print_iter_stats(k,l_k,f_lin_opt_k_l,h_std_lpec_k_l,h_comp_lpec_k_l,'LPEC',stats_lpec.nodecount,stats_lpec.solver_message,lpec.rho_TR,norm(d_lpec_k_l),stats_lpec.cpu_time,' ')
+                    end
+                    % One could do a fallbakc strategy here if the LPEC fails, but should not happen as these LPECs are always feasible, code can be found in lpec_fallback_strategy_phase_ii.m
+                    if lpec_solution_exists
+                        if opts.plot_lpec_iterate
+                            plot_lpec(nabla_f_k, x_k, d_lpec_k_l, rho_TR_k_l)
+                        end
+                        % --------------------------- Check if B-stationary point found --------------------------
+                        h_total_k = full(mpec_casadi.h_total_fun(x_k,p0));
+                        if (h_total_k <= opts.tol) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
+                            if opts.reset_lpec_objective
+                                d_lpec_k_l = d_lpec_k_l*0; % if the current point is feasible, and the objective is zero, then d = 0 is also a solution of the lpec (occurs if a solution is not on the verties of the lp)
+                                f_lin_opt_k_l = 0;
+                            end
+                        end
+                        if norm(d_lpec_k_l) <= opts.tol_B_stationarity
+                            % if abs(f_lin_opt_k_l) <= settings.tol_B_stationarity 
+                            stats.stopping_criterion_fullfiled = true;     % B-stationary point found, optimal solution found!
+                            stats.solver_message = 'B-stationary point found sucessfully.';
+                            stats.success = true;
+                            stats.b_stationarity = true;
+                            resolve_nlp = false;
+                            if opts.count_first_lpec_into_phase_i && k == 1 && l_k == 1 && phase_ii
+                                stats.solved_in_phase_i = true;
+                            end
+                        end
+
+                        stats.iter.X_lpec = [stats.iter.X_lpec, x_trail_lpec];
+                        stats.iter.d_norm_lpec = [stats.iter.d_norm_lpec, norm(d_lpec_k_l)];
+                        stats.iter.f_lpec = [stats.iter.f_lpec, f_lin_opt_k_l]; % store some stats
+                                                                                % --------------------------- set up piece NLP with new active set-------------------------
+                        if opts.compute_bnlp_step && ~stats.stopping_criterion_fullfiled
+                            lbx_bnlp_k = solver_initialization.lbx; ubx_bnlp_k = solver_initialization.ubx;  % reset bounds of bnlp.
+                            lbg_tnlp_k = solver_initialization.lbg; ubg_tnlp_k = solver_initialization.ubg;
+                            % find_active_sets_tnlp
+                            active_set_estimate_k = find_active_sets_piece_nlp(x_trail_lpec,nabla_f_k,y_lpec_k_l,dims,opts,opts.tol_active);
+                            ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
+                            ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_plus_0)) = 0;
+                            ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
+                            ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
+                            active_set_changes_k_l = round(sum(abs(y_lpec_k_l-y_lpec_k_previous)));
+                            stats.iter.active_set_changes  = [stats.iter.active_set_changes, active_set_changes_k_l];
+
+                            if active_set_changes_k_l > 0 || (l_k == 1)
+                                resolve_nlp  = true;
+                            else
+                                resolve_nlp  = false;
+                            end
+                            % --------------------------- solve piece NLP -------------------------
+                            if resolve_nlp
+                                t_nlp_start = tic;
+                                results_nlp = mpec_casadi.solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
+                                cpu_time_nlp_k_l = toc(t_nlp_start);
+                                x_trail_nlp = full(results_nlp.x);
+                                lambda_x_trail_nlp = full(results_nlp.lam_x);
+                                stats_nlp = mpec_casadi.solver.stats();
+                                nlp_iters_k_l = stats_nlp.iter_count;
+                                h_comp_k_l = full(mpec_casadi.h_comp_fun(x_trail_nlp,p0));
+                                h_std_k_l = full(mpec_casadi.h_std_fun(x_trail_nlp,p0));
+                                f_opt_k_l = full(mpec_casadi.f_fun(x_trail_nlp,p0));
+                                f_k_trail = full(mpec_casadi.f_fun(x_trail_nlp, p0));
+                                n_nlp_k = n_nlp_k+1;
+                                d_nlp_k_l = x_trail_nlp-x_k;
+                                stats.n_nlp_total = stats.n_nlp_total+1;
+                                if ~phase_ii
+                                    stats.iter.cpu_time_nlp_phase_i_iter = [stats.iter.cpu_time_nlp_phase_i_iter, cpu_time_nlp_k_l];
+                                else
+                                    stats.iter.cpu_time_nlp_phase_ii_iter = [stats.iter.cpu_time_nlp_phase_ii_iter, cpu_time_nlp_k_l];
+                                end
+                                stats.iter.X_all = [stats.iter.X_all, x_trail_nlp];
+                                nlp_step_sucessful = true;
+
+                                if isequal(stats_nlp.return_status,'Infeasible_Problem_Detected') && opts.debug_mode_on 
+                                    % this may hapen if lpec makes big jump and xk not fesaible for new bnlp
+                                    keyboard;                   
+                                end
+
+                                if ~ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'})
+                                    % if full(mpec_casadi.h_total_fun(x_trail_nlp,p0)) <= settings.tol_feasibility
+                                    % Remark: This may happen if the full LPEC is allowed to jump over inactive corners, otherwise, with the reduced LPEC it always starts from a feasible point.
+                                    % stopping_criterion_fullfiled = true;
+                                    accept_trail_step = false;
+                                    nlp_step_sucessful = false;
+                                    solver_message = ['NLP solver faild to solve BNLP in Phase II: ' stats_nlp.return_status '.'];
+                                    if opts.debug_mode_on
+                                        keyboard;
+                                    end
+                                else
+                                    % -------------------- Check is the BNLP solution S-stationary ------------------------------
+                                    if opts.stop_if_S_stationary && ~stats.stopping_criterion_fullfiled
+                                        active_set_estimate_k = find_active_sets(x_trail_nlp, dims, opts.tol_active); % check is it S-stationary;
+                                        if sum(active_set_estimate_k.I_00) == 0
+                                            stats.stopping_criterion_fullfiled = true;
+                                            stats.multiplier_based_stationarity = 'S';
+                                            stats.solver_message = 'S-stationary point found, BNLP biactive set is empty.';
+                                            stats.b_stationarity = true;
+                                            stats.success = true;
+                                            stats.f_lpec = 0;
+                                            x_k = x_trail_nlp;
+                                        else
+                                            if opts.resolve_tnlp_for_stationarity && ~opts.PieceNLPStartegy == "TNLP"
+                                                % get rid of bilinear constraints
+                                                ubg_relaxed(ind_comp) = +inf;
+                                                if strcmp(opts.relax_and_project_homotopy_parameter_steering,'Ell_1') || strcmp(opts.relax_and_project_homotopy_parameter_steering,'Ell_inf')
+                                                    ubx_relaxed(end) = +inf;
+                                                end
+                                                ubx_relaxed(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
+                                                ubx_relaxed(dims.ind_x2(active_set_estimate_k.I_plus_0)) = 0;
+                                                ubx_relaxed(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
+                                                ubx_relaxed(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
+                                                % solve TNLP
+                                                solver_initialization_relaxed.x0 = x_k_init;
+                                                results_nlp = solver_relaxed('x0',solver_initialization_relaxed.x0,'p',solver_initialization_relaxed.p0,'lbx',solver_initialization_relaxed.lbx,'ubx',solver_initialization_relaxed.ubx,'lbg',solver_initialization_relaxed.lbg,'ubg',solver_initialization_relaxed.ubg);
+                                                x_k = full(results_nlp.x);
+                                                x_k = x_k(1:dims.n_primal);
+                                                lambda_x_k = full(results_nlp.lam_x);
+                                                lambda_x_k  = lambda_x_k(1:dims.n_primal);
+                                                % lambda_g_k = full(results_nlp.lam_g);
+                                                [stats.multiplier_based_stationarity, solver_message] = determine_multipliers_based_stationary_point(x_k,lambda_x_k,dims,opts);
+                                                if strcmp(stats.multiplier_based_stationarity,'S')
+                                                    stats.stopping_criterion_fullfiled = true;
+                                                    stats.solver_message = 'S-stationary point found, BNLP biactive set is nonempty.';
+                                                    stats.success = true;
+                                                    stats.b_stationarity = true;
+                                                    stats.f_lpec = 0;
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            else
+                                d_nlp_k_l = 0*d_nlp_k_l;
+                            end
+                        else
+                            if ~opts.compute_bnlp_step
+                                x_trail_nlp = x_trail_lpec;  % take only lpec steps (slower convergence) % only linear steps (needs apropiate globalization strategy)
+                                f_k_trail = full(mpec_casadi.f_fun(x_trail_nlp, p0));
+                                stats.iter.X_all = [stats.iter.X_all, x_trail_nlp];
+                            end
+                        end
+                        % --------------------------- Globalization: check step acceptence -------------------------
+                        t_globalization_iter = tic;
+                        if ~stats.stopping_criterion_fullfiled 
+                            % Current iterate
+                            f_k = full(mpec_casadi.f_fun(x_k, p0));
+                            h_std_k = full(mpec_casadi.h_std_fun(x_k, p0));
+                            h_comp_k = full(mpec_casadi.h_comp_fun(x_k, p0));
+                            h_total_k = max(h_std_k,h_comp_k);
+                            % Trail point
+                            f_k_trail = full(mpec_casadi.f_fun(x_trail_nlp, p0));
+                            delta_f_k_l = f_k-f_k_trail;
+                            h_std_k_trail = full(mpec_casadi.h_std_fun(x_trail_nlp, p0));
+                            h_comp_k_trail = full(mpec_casadi.h_comp_fun(x_trail_nlp, p0));
+                            h_total_k_trail = max(h_std_k_trail,h_comp_k_trail);
+                            % f_k_linear_trail = full(mpec_casadi.f_fun(x_k+d_lpec_k_l, p0));
+
+                            % Check if sufficient objective decerase w.r.t to current iterate
+                            feasible_enough = h_total_k_trail < opts.tol_feasibility;
+                            if feasible_enough
+                                if f_k_trail < f_k
+                                    accept_trail_step = true;
+                                else
+                                    accept_trail_step = false;
+                                    if opts.debug_mode_on
+                                        % debug rejected step;
+                                        keyboard;
+                                    end
+                                end
+                            else
+                                % in case Phase I gave a point that is not feasible, but phase II fixed it - normally this should never happen.
+                                if nlp_step_sucessful
+                                    accept_trail_step = true;
+                                end
+                                if opts.debug_mode_on
+                                    keyboard;
+                                end
+                            end
+                            
+                            % Update TR:
+                            if accept_trail_step 
+                                rho_TR_k_l = opts.TR_increasing_factor*rho_TR_k_l;
+                            else
+                                rho_TR_k_l = opts.TR_reducing_factor*rho_TR_k_l;
+                            end
+                            % rho_TR_k_l = max(opts.rho_TR_min,rho_TR_k_l);
+                            if rho_TR_k_l < opts.rho_TR_min && l_k > 1
+                                n_cycles = n_cycles+1;
+                                break; % avoid cyclin with rho_TR_min
+                            end
+                            
+                            stats.iter.cpu_time_globalization_iter = [stats.iter.cpu_time_globalization_iter; toc(t_globalization_iter)];
+                            % ------------------- Debug mode - catch some unexpected behaviour ---------------------
+                            if ~feasible_enough && k>1 && opts.debug_mode_on
+                                keyboard; % Stop if Phase II has infeasible problems;
+                            end
+                            if feasible_enough && f_k_trail > f_k && opts.debug_mode_on
+                                % Stop here if the objective incerased when started from a feasible point, see also % results_lpec.f_opt;
+                                % This can happen if LPEC predictes reduction, but actual redicution does not happen
+                                keyboard;
+                            end
+                            % reject step, reduce TR and compute new step (check the filte only if nlp resolved)
+                            if opts.accept_last_inner_iter && l_k == opts.max_inner_iter && ~accept_trail_step
+                                accept_trail_step = true;
+                                if opts.debug_mode_on
+                                    keyboard;
+                                end
+                            end
+                        end
+                        if accept_trail_step
+                            x_k = x_trail_nlp; % completion of one outer iter
+                            if opts.compute_bnlp_step
+                                lambda_x_k = full(results_nlp.lam_x);
+                            end
+                        end
+                        % ----------------------------  verbose current inner NLP iter ------------------------------
+                        if opts.verbose_solver && resolve_nlp && opts.compute_bnlp_step
+                            % print_iter_stats(k,l_k,f_opt_k_l,h_std_k_l,h_comp_k_l,'BNLP',nlp_iters_k_l,stats_nlp.return_status,rho_TR_k_l,norm(d_nlp_k_l),stats.multiplier_based_stationarity,accept_trail_step) % Verbose inner iterations.
+                            print_iter_stats(k,l_k,f_opt_k_l,h_std_k_l,h_comp_k_l,'BNLP',nlp_iters_k_l,stats_nlp.return_status,rho_TR_k_l,delta_f_k_l,cpu_time_nlp_k_l,accept_trail_step) % Verbose inner iterations.
+                        end
+                    else
+                        % LPEC failed -- This can happen only if a CQ does not hold or an infeasible point was passed to Phase II
+                        stats.solver_message = 'LPEC inconsistent - solution failed.';
+                        stats.problem_infeasible = true;
+                        stats.stopping_criterion_fullfiled = true;
+
+                        if opts.debug_mode_on
+                            keyboard;
+                        end
+                    end
+                    l_k = l_k+1; % inner iterations counter
+                end
+                % compute new objective and residuals - with accepted point
+                f_k = full(mpec_casadi.f_fun(x_k,p0));
+                h_std_k = full(mpec_casadi.h_std_fun(x_k,p0));
+                h_comp_k = full(mpec_casadi.h_comp_fun(x_k,p0));
+                % store stats
+                stats.total_inner_iterations = [stats.total_inner_iterations, l_k];
+                stats.iter.X_outer  = [stats.iter.X_outer, x_k];
+                stats.iter.f_iter = [stats.iter.f_iter, f_k];
+                stats.iter.h_std_iter = [stats.iter.h_std_iter, h_std_k];
+                stats.iter.h_comp_iter = [stats.iter.h_comp_iter, h_comp_k];
+                stats.iter.n_nlp_iter = [stats.iter.n_nlp_iter, n_nlp_k];
+                stats.iter.n_lpec_iter = [stats.iter.n_lpec_iter, n_lpec_k];
+                k = k+1;
+                if opts.verbose_solver
+                    print_iter_line();
+                end
+                if n_cycles >= 3
+                    stats.solver_message = 'Major loop was cycling due to bad problem scaling or too low tolerances.';
+                    break;
+                end
+            end
+            stats.rho_TR_final = rho_TR_k_l;
+            if phase_ii
+                stats.cpu_time_phase_ii = toc(t_phase_ii_start);
+            end
+
+            if k >= opts.max_iter
+                stats.max_iterations_reached = true;
+                if opts.debug_mode_on
+                    keyboard;
+                end
+            end
+            %  ------------- max iteration but early terminaton tolorance achieved?---------------------
+            if ((stats.max_iterations_reached && stats.success == 0) || n_cycles == 3)&& opts.allow_early_termination
+                if (h_total_k <= opts.tol_B_stationarity_early_term) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity_early_term|| norm(nabla_f_k) <= opts.tol_B_stationarity_early_term))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
+                                                                                                                                                                                              % B-stationary point found, optimal solution found!
+                    if n_cycles == 3
+                        stats.solver_message = 'Major loop was cycling due to bad problem scaling or too low tolerances. B-stationary point found at lower tolerance.';
+                    else
+                        stats.solver_message = 'Maximum number of iterations reached, B-stationary point found at lower tolerance.';
+                    end
+                    stats.success = true;
+                    stats.b_stationarity = true;
+                    stats.f_lpec = f_lin_opt_k_l;
+                end
+                if opts.debug_mode_on
+                    keyboard;
+                end
+            end
+
+            % --------------- compute multiplier-based stationary points --------------
+            multiplier_based_stationarity_debug = stats.multiplier_based_stationarity;
+            if (stats.success || k==opts.max_iter) && opts.compute_tnlp_stationary_point && phase_ii
+                % if ~strcmp(opts.piece_nlp_strategy,'TNLP')
+                % resolve TNLP for correct multipliers
+                lbx_bnlp_k = solver_initialization.lbx; ubx_bnlp_k = solver_initialization.ubx;  % reset bounds of bnlp.
+                lbg_tnlp_k = solver_initialization.lbg; ubg_tnlp_k = solver_initialization.ubg;
+                initial_strategy = opts.piece_nlp_strategy;
+                opts.piece_nlp_strategy = 'TNLP'; % used to get tnlp active sets
+                nabla_f_k = full(mpec_casadi.nabla_f_fun(x_k,p0));
+                active_set_estimate_k = find_active_sets_piece_nlp(x_k,nabla_f_k,y_lpec_k_l,dims,opts,opts.tol_active);
+                ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
+                ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_plus_0)) = 0;
+                ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
+                ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
+                opts.piece_nlp_strategy = initial_strategy;
+                % end
+                t_nlp_start = tic;
+                results_nlp = mpec_casadi.solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
+                cpu_time_nlp_k_l = toc(t_nlp_start);
+                x_k_multi = full(results_nlp.x);
+                lambda_x_k = full(results_nlp.lam_x);
+                [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,opts);
+            end
+
+            % Debug falure of stationary point computation
+            if ~strcmp(multiplier_based_stationarity_debug,'X') && opts.debug_mode_on &&  ~isequal(multiplier_based_stationarity_debug,stats.multiplier_based_stationarity)
+                keyboard;
+            end
+
+            % eval stats at solution
+            % x_k = x_k(1:dims.n_primal_non_lifted);
+            solution.x = x_k(dims.map_w(1:dims.n_primal_non_lifted));
+            solution.x_lifted = x_k(dims.map_w);
+            solution.f = full(mpec_casadi.f_fun(x_k,p0));
+            solution.x1_opt = x_k(dims.map_w(dims.ind_x1));
+            solution.x2_opt = x_k(dims.map_w(dims.ind_x2));
+            stats.h_std = full(mpec_casadi.h_std_fun(x_k,p0));
+            stats.comp_res = full(mpec_casadi.h_comp_fun(x_k,p0));
+            stats.h_total = full(mpec_casadi.h_total_fun(x_k,p0));
+            stats.total_outer_iterations = k;
+
+            stats.n_biactive = sum(x_k(dims.ind_x1)+x_k(dims.ind_x2) < 2*opts.tol_active );
+            try
+                stats.lambda_g_opt = full(results_nlp.lam_g(dims.map_g));
+                stats.lambda_x_opt = full(results_nlp.lam_x(dims.map_x));
+                stats.n_active_ineq = sum(abs(lambda_g_opt(ind_g_ineq))>opts.tol);
+                stats.n_active_box = sum(abs((lambda_x_opt))>opts.tol & lbx_bnlp_k~=ubx_bnlp_k);
+                stats.n_box = sum(lbx_bnlp_k~=ubx_bnlp_k);
+                stats.n_box_simple = sum(lbx_bnlp_k==ubx_bnlp_k);
+            catch
+                stats.n_active_ineq = nan;
+                stats.n_active_box = nan;
+                stats.n_box = sum(solver_initialization.lbx~=solver_initialization.ubx);
+                stats.n_box_simple = sum(solver_initialization.lbx==solver_initialization.ubx);
+            end
+        end
+
+        function [solver_relaxed,solver_initialization_relaxed] = create_phase_i_solver(obj)
+            import casadi.*
+            % symbolics
+            dims = obj.dims;
+            sigma_relaxed = SX.sym('sigma_relaxed',1); 
+            x_relaxed = obj.mpec_casadi.x; 
+            x1 = obj.mpec_casadi.x1;
+            x2 = obj.mpec_casadi.x2;
+            f_relaxed = obj.mpec_casadi.f;
+            g = obj.mpec_casadi.g;
+            
+            % Parameters
+            p_relaxed = [obj.mpec_casadi.p;sigma_relaxed];  
+            
+
+            % relaxed complementarity constraints;
+            g_comp_relaxed = []; 
+            lbg_comp_relaxed = [];  
+            ubg_comp_relaxed = [];
+
+           
+
+            switch obj.opts.relax_and_project_homotopy_parameter_steering
+              case "Direct"
+                if obj.opts.relax_and_project_comps_aggregated
+                    g_comp_relaxed = x1'*x2-sigma_relaxed*dims.n_comp;
+                else
+                    g_comp_relaxed = x1.*x2-sigma_relaxed;
+                end
+              case "Ell_1"
+                f_relaxed = f_relaxed+(x1'*x2)*(sigma_relaxed)^(-1);
+              case "Ell_inf"
+                % x_k_relaxed = project_to_bounds(x_k_relaxed ,lbx,ubx,dims);
+                s_eleastic = SX.sym('s_eleastic',1);
+                f_relaxed = f_relaxed+(s_eleastic)*(sigma_relaxed)^(-1);
+                x_relaxed = [x_relaxed;s_eleastic];
+                if obj.opts.relax_and_project_comps_aggregated
+                    g_comp_relaxed = x1'*x2-s_eleastic*dims.n_comp;
+                else
+                    g_comp_relaxed = x1.*x2-s_eleastic;
+                end
+            end
+
+            g_relaxed = [g;g_comp_relaxed]; 
+
+
+            %% --------- create solver for Phase I -----------------------------------
+            nlp_relaxed = struct('x', x_relaxed,'f', f_relaxed,'g', g_relaxed,'p',p_relaxed);
+            obj.solver_relaxed = nlpsol('solver_relaxed', 'ipopt', nlp_relaxed, obj.opts.settings_casadi_nlp);
+        end
+
+        function [solver_initialization_relaxed] = create_phase_i_solver_initialization(obj)
+            solver_initialization = obj.solver_initialization;
+            dims = obj.dims;
+            x_k_relaxed = solver_initialization.x0;
+            p0_relaxed = [solver_initialization.p0; obj.opts.relax_and_project_sigma0];
+             % bounds
+            lbx_relaxed = solver_initialization.lbx; 
+            ubx_relaxed = solver_initialization.ubx;
+            lbg_relaxed = solver_initialization.lbg; 
+            ubg_relaxed = solver_initialization.ubg;
+
+            switch obj.opts.relax_and_project_homotopy_parameter_steering
+              case "Direct"
+                if obj.opts.relax_and_project_comps_aggregated
+                    lbg_comp_relaxed = -inf;
+                    ubg_comp_relaxed = 0;
+                else
+                    lbg_comp_relaxed = -inf*ones(dims.n_comp,1);
+                    ubg_comp_relaxed = 0*ones(dims.n_comp,1);
+                end
+              case "Ell_inf"
+                % x_k_relaxed = project_to_bounds(x_k_relaxed ,lbx,ubx,dims);
+                lbx_relaxed = [lbx_relaxed;0];
+                ubx_relaxed = [ubx_relaxed;max(10,obj.opts.relax_and_project_sigma0*10)];
+                x_k_relaxed = [x_k_relaxed;obj.opts.relax_and_project_sigma0];
+                if obj.opts.relax_and_project_comps_aggregated
+                    lbg_comp_relaxed = -inf;
+                    ubg_comp_relaxed = 0;
+                else
+                    lbg_comp_relaxed = -inf*ones(dims.n_comp,1);
+                    ubg_comp_relaxed = 0*ones(dims.n_comp,1);
+                end
+            end
+
+            lbg_relaxed = [lbg_relaxed;lbg_comp_relaxed]; 
+            ubg_relaxed = [ubg_relaxed;ubg_comp_relaxed];
+            % ind_comp = ind_comp:1:length(g_relaxed);
+            % Output solver initalization
+            solver_initialization_relaxed.x0 = x_k_relaxed;
+            solver_initialization_relaxed.lbx = lbx_relaxed;
+            solver_initialization_relaxed.ubx = ubx_relaxed;
+            solver_initialization_relaxed.lbg = lbg_relaxed;
+            solver_initialization_relaxed.ubg = ubg_relaxed;
+            solver_initialization_relaxed.p0 = p0_relaxed;
+        end
+    end
+end
+
+
+function X = all_combinations(varargin)
+    numSets = length(varargin);
+    for i=1:numSets,
+        thisSet = sort(varargin{i});
+        if ~isequal(prod(size(thisSet)),length(thisSet)),
+            nosnoc.error('combinations_not_vectors', 'All inputs must be vectors.')
+        end
+        if ~isnumeric(thisSet),
+            nosnoc.error('cominations_not_numeric','All inputs must be numeric.')
+        end
+        sizeThisSet(i) = length(thisSet);
+        varargin{i} = thisSet;
+    end
+    X = zeros(prod(sizeThisSet),numSets);
+    for i=1:size(X,1)
+        ixVect = cell(length(sizeThisSet),1);
+        [ixVect{:}] = ind2sub(flip(sizeThisSet),i);
+        ixVect = flip([ixVect{:}]);
+        vect = zeros(1, numSets);
+        for jj=1:numSets
+            vect(jj) = varargin{jj}(ixVect(jj));
+        end
+        X(i,:) = vect;
     end
 end
