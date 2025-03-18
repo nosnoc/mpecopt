@@ -789,23 +789,23 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             ubg = solver_initialization.ubg;
             x0 = solver_initialization.x0;
             solver_initialization.lbx = zeros(dims.n_primal,1);
-            solver_initialization.lbx(map_w(dims.ind_x)) = lbx;
-            solver_initialization.lbx(map_w(dims.ind_x1)) = 0;
-            solver_initialization.lbx(map_w(dims.ind_x2)) = 0;
+            solver_initialization.lbx(dims.ind_x) = lbx;
+            solver_initialization.lbx(dims.ind_x1) = 0;
+            solver_initialization.lbx(dims.ind_x2) = 0;
             solver_initialization.ubx = inf(dims.n_primal,1);
-            solver_initialization.ubx(map_w(dims.ind_x)) = ubx;
+            solver_initialization.ubx(dims.ind_x) = ubx;
             solver_initialization.lbg = zeros(dims.n_g,1);
-            solver_initialization.lbg(map_g(dims.ind_g)) = lbg;
+            solver_initialization.lbg(dims.ind_g) = lbg;
             solver_initialization.ubg = zeros(dims.n_g,1);
-            solver_initialization.ubg(map_g(dims.ind_g)) = ubg;
+            solver_initialization.ubg(dims.ind_g) = ubg;
             solver_initialization.x0 = zeros(dims.n_primal,1);
-            solver_initialization.x0(map_w(dims.ind_x)) = x0;
+            solver_initialization.x0(dims.ind_x) = x0;
             if opts.lift_complementarities_full
-                solver_initialization.x0(map_w(dims.ind_x1)) = G_eval;
-                solver_initialization.x0(map_w(dims.ind_x2)) = H_eval;
+                solver_initialization.x0(dims.ind_x1) = G_eval;
+                solver_initialization.x0(dims.ind_x2) = H_eval;
             else
-                solver_initialization.x0(map_w(dims.ind_nonscalar_x1)) = G_eval(dims.ind_nonscalar_x1);
-                solver_initialization.x0(map_w(dims.ind_nonscalar_x2)) = H_eval(dims.ind_nonscalar_x2);
+                solver_initialization.x0(dims.ind_nonscalar_x1) = G_eval(dims.ind_nonscalar_x1);
+                solver_initialization.x0(dims.ind_nonscalar_x2) = H_eval(dims.ind_nonscalar_x2);
             end
             %% Split into equalites and inequalities
             % TODO@Anton?: Get rid of this unfold?
@@ -1092,6 +1092,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     ind_x0([ind_x1,ind_x2]) = [];
                 end
                 x0 = x(ind_x0); % Variables not involved in complementarity constraints.
+                n_g = length(g);
             else
                 try
                     x = mpec.x;
@@ -1114,6 +1115,10 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 n_comp = size(G,1);
                 G_fun = Function('G_fun',{x,p},{G});
                 H_fun = Function('H_fun',{x,p},{H});
+
+                
+                dims.ind_x = 1:n_primal_non_lifted;
+                dims.ind_g = 1:n_g_non_lifted;
 
                 G_copy = G_fun(x,p);
                 H_copy = H_fun(x,p);
@@ -1215,6 +1220,10 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     ind_x0([ind_x1,ind_x2]) = [];
                 end
                 x0 = x(ind_x0); % Variables not involved in complementarity constraints.
+
+                n_g = length(g);
+                dims.map_w = 1:n_primal;
+                dims.map_g = 1:n_g;
             end
             
             nabla_f = f.jacobian(x)';
@@ -1239,11 +1248,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             mpec_casadi.nabla_g_fun = Function('nabla_g_fun',{x,p},{nabla_g});
 
             %% Store some dimensions
-            n_g = length(g);
-            dims.ind_x = 1:n_primal_non_lifted;
-            dims.ind_g = 1:n_g_non_lifted;
-            dims.map_w = 1:n_primal;
-            dims.map_g = 1:n_g;
             dims.n_slacks = 0; % in generla no slacks, except in feasiblity problems
             dims.ind_x0 = ind_x0;
             dims.ind_x1 = ind_x1;
