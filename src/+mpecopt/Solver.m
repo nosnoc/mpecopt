@@ -955,8 +955,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         G_curr = mpec.G.(name)();
                         H_curr = mpec.H.(name)();
                         
-                        [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym);
-                        [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym);
+                        [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym, mpec.p.sym);
+                        [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym, mpec.p.sym);
                                                 
                         mpec.w.([name '_G_lift']) = {{'G', length(ind_nonscalar_G)}, 0, inf};
                         G_lift = G_curr(ind_nonscalar_G);
@@ -1000,8 +1000,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
                             % TODO(@anton) this is in an if for performance reasons not to call find_nonscalar many times
                             %              however it is likely that this can be done in 1 shot?
-                            [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym);
-                            [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym);
+                            [ind_scalar_G,ind_nonscalar_G, ind_map_G] = find_nonscalar(G_curr, mpec.w.sym, mpec.p.sym);
+                            [ind_scalar_H,ind_nonscalar_H, ind_map_H] = find_nonscalar(H_curr, mpec.w.sym, mpec.p.sym);
                             
                             mpec.w.([name '_G_lift'])(curr{:}) = {{'G', length(ind_nonscalar_G)}, 0, inf};
                             G_lift = G_curr(ind_nonscalar_G);
@@ -1134,7 +1134,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 else
                     % lifting with only those that are not scaler
                     % define lift vairables
-                    [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x);
+                    [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x,p);
                     n_lift_x1 = length(ind_nonscalar_x1);
                     if n_lift_x1 == 0
                         % TODO(@anton) Figure out what this does.
@@ -1170,7 +1170,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     g = [g;x2-H];
                 else
                     % lifting with only those that are not scaler
-                    [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x);
+                    [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x,p);
                     n_lift_x2 = length(ind_nonscalar_x2);
                     if n_lift_x2 == 0
                         % TODO(@anton) Figure out what this does.

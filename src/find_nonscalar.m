@@ -1,19 +1,23 @@
-function [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(g,w)
+function [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(g,w,p)
     % Implemented by Anton Pozharskiy within nosnoc: https://github.com/nosnoc/nosnoc
     % This function returns the indices of g which contain elements of the symbolic vector w, along with its
-    % nonscalar indicies and the ind_map which are the indices in w which correspond to scalar elements of g.
+% nonscalar indicies and the ind_map which are the indices in w which correspond to scalar elements of g.
+    if ~exist('p')
+        p = SX([]);
+    end
     import casadi.*
     % Take jacobian of g with respect to w.
-    ind_g_fun = Function('ind_G', {w}, {g.jacobian(w)});
+    ind_g_fun = Function('ind_G', {w,p}, {g.jacobian(w)});
+    p_val = SX(ones(length(p),1));
     % HERE BE DRAGONS:
     % `ind_g_fun(w) == 1` creates a symbolic array where literal `1` are ones, other constants are zeros and
     % symbolics are nans when converted to a casadi.DM.
     %
     % We want to find rows which contain only exactly one nonstructural 0, 1, or nan.
     % We get this from using find on the sparsity patern of the DM.
-    sp = DM(ind_g_fun(w) == 1).sparsity;
+    sp = DM(ind_g_fun(w,p) == 1).sparsity;
     sub = sp.find;
-    [ind_g1, ind_g2] = ind2sub(size(ind_g_fun(w)),sub);
+    [ind_g1, ind_g2] = ind2sub(size(ind_g_fun(w,p)),sub);
     % transpose because groupcounts expects column vector
     c=groupcounts(ind_g1');
     ind_scalar=ind_g1(find(c==1));
