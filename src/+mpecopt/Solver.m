@@ -284,6 +284,9 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     end
                     % If not sucessful do one more relaxation step until max reached
                     if feasible_bnlp_found
+                        % if we have a feasible BNLP already papulate the multipliers as we may not have a chance to later.
+                        stats.lambda_g_opt = full(results_nlp.lam_g(dims.map_g(1:dims.n_g_non_lifted)));
+                        stats.lambda_x_opt = full(results_nlp.lam_x(dims.map_w(1:dims.n_primal_non_lifted)));
                         stats.success_phase_i = true;
                         break;
                     else
@@ -696,27 +699,27 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             if ~isempty(p.Results.x0)
                 obj.solver_initialization.x0 = p.Results.x0;
             else
-                obj.solver_initialization.x0 = zeros(dims.n_primal,1);
+                obj.solver_initialization.x0 = zeros(dims.n_primal_non_lifted,1);
             end
             if ~isempty(p.Results.lbx)
                 obj.solver_initialization.lbx = p.Results.lbx;
             else
-                obj.solver_initialization.lbx = -inf(dims.n_primal,1);
+                obj.solver_initialization.lbx = -inf(dims.n_primal_non_lifted,1);
             end
             if ~isempty(p.Results.ubx)
                 obj.solver_initialization.ubx = p.Results.ubx;
             else
-                obj.solver_initialization.ubx = inf(dims.n_primal,1);
+                obj.solver_initialization.ubx = inf(dims.n_primal_non_lifted,1);
             end
             if ~isempty(p.Results.lbg)
                 obj.solver_initialization.lbg = p.Results.lbg;
             else
-                obj.solver_initialization.lbg = zeros(dims.n_g,1);
+                obj.solver_initialization.lbg = zeros(dims.n_g_non_lifted,1);
             end
             if ~isempty(p.Results.ubg)
                 obj.solver_initialization.ubg = p.Results.ubg;
             else
-                obj.solver_initialization.ubg = zeros(dims.n_g,1);
+                obj.solver_initialization.ubg = zeros(dims.n_g_non_lifted,1);
             end
             if ~isempty(p.Results.p)
                 obj.solver_initialization.p0 = p.Results.p;
@@ -726,12 +729,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             if ~isempty(p.Results.lam_g0)
                 obj.solver_initialization.lam_g0 = p.Results.lam_g0;
             else
-                obj.solver_initialization.lam_g0 = zeros(dims.n_g, 1);
+                obj.solver_initialization.lam_g0 = zeros(dims.n_g_non_lifted, 1);
             end
             if ~isempty(p.Results.lam_x0)
                 obj.solver_initialization.lam_x0 = p.Results.lam_x0;
             else
-                obj.solver_initialization.lam_x0 = zeros(dims.n_primal, 1);
+                obj.solver_initialization.lam_x0 = zeros(dims.n_primal_non_lifted, 1);
             end
             if ~isempty(p.Results.y0)
                 obj.solver_initialization.y0 = p.Results.y0;
@@ -1731,13 +1734,18 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
             stats.n_biactive = sum(x_k(dims.ind_x1)+x_k(dims.ind_x2) < 2*opts.tol_active );
             try
-                stats.lambda_g_opt = full(results_nlp.lam_g(dims.map_g));
-                stats.lambda_x_opt = full(results_nlp.lam_x(dims.map_x));
+                stats.lambda_g_opt = full(results_nlp.lam_g(dims.map_g(1:dims.n_g_non_lifted)));
+                stats.lambda_x_opt = full(results_nlp.lam_x(dims.map_w(1:dims.n_primal_non_lifted)));
+                solution.lam_g = stats.lambda_g_opt;
+                solution.lam_x = stats.lambda_x_opt;
                 stats.n_active_ineq = sum(abs(lambda_g_opt(ind_g_ineq))>opts.tol);
                 stats.n_active_box = sum(abs((lambda_x_opt))>opts.tol & lbx_bnlp_k~=ubx_bnlp_k);
                 stats.n_box = sum(lbx_bnlp_k~=ubx_bnlp_k);
                 stats.n_box_simple = sum(lbx_bnlp_k==ubx_bnlp_k);
             catch
+                
+                solution.lam_g = stats.lambda_g_opt;
+                solution.lam_x = stats.lambda_x_opt;
                 stats.n_active_ineq = nan;
                 stats.n_active_box = nan;
                 stats.n_box = sum(solver_initialization.lbx~=solver_initialization.ubx);
