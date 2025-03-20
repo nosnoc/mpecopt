@@ -1733,9 +1733,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             stats.total_outer_iterations = k;
 
             stats.n_biactive = sum(x_k(dims.ind_x1)+x_k(dims.ind_x2) < 2*opts.tol_active );
+
             try
                 stats.lambda_g_opt = full(results_nlp.lam_g(dims.map_g(1:dims.n_g_non_lifted)));
                 stats.lambda_x_opt = full(results_nlp.lam_x(dims.map_w(1:dims.n_primal_non_lifted)));
+            end
+            try
                 solution.lam_g = stats.lambda_g_opt;
                 solution.lam_x = stats.lambda_x_opt;
                 stats.n_active_ineq = sum(abs(lambda_g_opt(ind_g_ineq))>opts.tol);
@@ -1743,9 +1746,6 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 stats.n_box = sum(lbx_bnlp_k~=ubx_bnlp_k);
                 stats.n_box_simple = sum(lbx_bnlp_k==ubx_bnlp_k);
             catch
-                
-                solution.lam_g = stats.lambda_g_opt;
-                solution.lam_x = stats.lambda_x_opt;
                 stats.n_active_ineq = nan;
                 stats.n_active_box = nan;
                 stats.n_box = sum(solver_initialization.lbx~=solver_initialization.ubx);
