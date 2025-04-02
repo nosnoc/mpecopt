@@ -1077,10 +1077,26 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     % TODO(@anton) do we actually need this here or can we calculate these "analytically"
                     ind_x1 = [];
                     ind_x2 = [];
-                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+                    % HERE BE DRAGONS: This is using some casadi internals to deduplicate x1, x2, expressions.
+                    % Get element cell arrays.
+                    x1_elem = x1.elements();
+                    x2_elem = x2.elements();
+                    % Get element hashes.
+                    x1_hashes = cellfun(@(x) x.element_hash(), x1_elem);
+                    x2_hashes = cellfun(@(x) x.element_hash(), x2_elem);
+                    % Get indicies of unique elements by comparing the element hashes.
+                    % WARNING: Technically these hashes may be nonunique but looking at how they are generated this should
+                    %          never practically be the case. If it happens though the symptoms should be obvious.
+                    [~,x1_uniq,x1_uniq_backmap] = unique(x1_hashes, 'stable');
+                    [~,x2_uniq,x2_uniq_backmap] = unique(x2_hashes, 'stable');
+                    % Get indicies with jacobian trick
+                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1(x1_uniq))});
+                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2(x2_uniq))});
                     [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
-                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
                     [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
+                    % Resize indices back into correct size by mapping back the nonunique elements
+                    ind_x1 = ind_x1(x1_uniq_backmap);
+                    ind_x2 = ind_x2(x2_uniq_backmap);
                     opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
                 else
                     opts.nlp_is_mpec = 0;
@@ -1205,10 +1221,26 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     % TODO(@anton) do we actually need this here or can we calculate these "analytically"
                     ind_x1 = [];
                     ind_x2 = [];
-                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+                    % HERE BE DRAGONS: This is using some casadi internals to deduplicate x1, x2, expressions.
+                    % Get element cell arrays.
+                    x1_elem = x1.elements();
+                    x2_elem = x2.elements();
+                    % Get element hashes.
+                    x1_hashes = cellfun(@(x) x.element_hash(), x1_elem);
+                    x2_hashes = cellfun(@(x) x.element_hash(), x2_elem);
+                    % Get indicies of unique elements by comparing the element hashes.
+                    % WARNING: Technically these hashes may be nonunique but looking at how they are generated this should
+                    %          never practically be the case. If it happens though the symptoms should be obvious.
+                    [~,x1_uniq,x1_uniq_backmap] = unique(x1_hashes, 'stable');
+                    [~,x2_uniq,x2_uniq_backmap] = unique(x2_hashes, 'stable');
+                    % Get indicies with jacobian trick
+                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1(x1_uniq))});
+                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2(x2_uniq))});
                     [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
-                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
                     [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
+                    % Resize indices back into correct size by mapping back the nonunique elements
+                    ind_x1 = ind_x1(x1_uniq_backmap);
+                    ind_x2 = ind_x2(x2_uniq_backmap);
                     opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
                 else
                     opts.nlp_is_mpec = 0;
