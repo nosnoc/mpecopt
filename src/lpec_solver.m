@@ -160,7 +160,7 @@ switch settings.lpec_solver
             model.Algorithm = 'legacy';
         end
     case "Highs_casadi"
-
+        % See for options: https://ergo-code.github.io/HiGHS/dev/options/definitions/
         A_highs = sparse([[lpec.A_eq, zeros(lpec.dims.n_eq, lpec.dims.n_auxiliary)];...
             [lpec.A_ineq,zeros(lpec.dims.n_ineq, lpec.dims.n_auxiliary)];...
             lpec.A_lpec]);
@@ -173,8 +173,21 @@ switch settings.lpec_solver
         highs_opts = struct;
         highs_opts.discrete = lpec.vtype_num;
         highs_opts.highs.log_to_console = false;
-        %highs_opts.highs.simplex_strategy = 4;
-        %highs_opts.error_on_fail = false;
+        % highs_opts.highs.simplex_strategy = 4;
+        % highs_opts.highs.error_on_fail = false;
+
+        % highs_opts.highs.mip_max_nodes = settings.max_nodes;
+        % highs_opts.highs.time_limit = settings.max_time;
+        % highs_opts.highs.optimality_tolerance = 1e-9;
+        % highs_opts.highs.mip_feasibility_tolerance = 1e-9;
+        % highs_opts.highs.kkt_tolerance = 1e-9;
+        % highs_opts.highs.primal_feasibility_tolerance = 1e-9;
+        % highs_opts.highs.dual_feasibility_tolerance = 1e-9;        
+        highs_opts.highs.mip_heuristic_effort = 0.1;
+
+
+        % highs_opts.highs.simplex_strategy = 4;
+        % highs_opts.error_on_fail = false;
         lpsol = conic('lp', 'highs', lp, highs_opts);
 
     case "Projected_Gradient"
@@ -279,7 +292,7 @@ switch settings.lpec_solver
             cpu_time = toc;
         catch
             model;
-            keyboard;
+            % keyboard;
             result_gurobi = [];
         end
         switch status

@@ -125,6 +125,7 @@ classdef Options < handle
             % obj.settings_lpec.abs_tol= 1e-8;
         
             default_tol = 1e-12;
+            obj.settings_casadi_nlp.detect_simple_bounds = true;
             obj.settings_casadi_nlp.ipopt.print_level = 0;
             obj.settings_casadi_nlp.print_time = 0;
             obj.settings_casadi_nlp.ipopt.sb = 'yes';
@@ -146,7 +147,7 @@ classdef Options < handle
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_push = 1e-6;
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_frac = 1e-6;
             obj.settings_casadi_nlp.ipopt.warm_start_entire_iterate = 'yes';
-            obj.settings_casadi_nlp.ipopt.linear_solver = 'mumps'; % mumps, ma27, ma57
+            obj.settings_casadi_nlp.ipopt.linear_solver = 'ma27'; % mumps, ma27, ma57
             obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'make_parameter';  % make_parameter  make_constraint relax_bounds
             
             % obj.opts_casadi_nlp.snopt = struct();

@@ -1,4 +1,4 @@
-function [solution,stats] = mpec_homotopy_solver(mpec,solver_initalization,settings)
+function [solution,stats] = mpec_minlp_solver(mpec,solver_initalization,settings)
 import casadi.*
 try
     x = mpec.x;
@@ -23,13 +23,9 @@ else
     p0 = [];
 end
 
-%% homotopy parameters
-sigma = SX.sym('sigma',1);
-ii = 1;
-comp_res_ii = 1e3;
-p = [p;sigma];
-p0 = [p0;settings.sigma0];
-%% comp functions
+x_class = class(x);           % get SX or MX class
+
+%% Bring MPEC into vertical form
 n_primal_non_lifted = length(x);
 n_comp = size(G,1);
 G_fun = Function('G_fun',{x,p},{G});
@@ -55,7 +51,12 @@ ind_x2 = [];
 % Lift complemetraties G
 if settings.lift_complementarities_full
     % full lifting with duplicatse;
-    x1 = SX.sym('x1',n_comp);
+    if strcmp(x_class,'casadi.SX')
+        x1 = SX.sym('x1', n_comp);
+    else
+        x1 = MX.sym('x1', n_comp);
+    end
+
     lbx = [lbx;0*ones(n_comp,1)];
     ubx = [ubx;inf*ones(n_comp,1)];
     x = [x;x1];
@@ -80,7 +81,12 @@ elseif settings.lift_complementarities
         end
     end
     if n_lift_x1 > 0
-        x1_lift = SX.sym('x1_lift',n_lift_x1);
+        if strcmp(x_class,'casadi.SX')
+            x1_lift = SX.sym('x1_lift',n_lift_x1);
+        else
+            x1_lift = MX.sym('x1_lift',n_lift_x1);
+        end
+
         lbx = [lbx;0*ones(n_lift_x1,1)];
         ubx = [ubx;inf*ones(n_lift_x1 ,1)];
         x = [x;x1_lift];
@@ -110,7 +116,11 @@ end
 % Lift complemetraties H
 if settings.lift_complementarities_full
     % full lifting with duplicatse;
-    x2 = SX.sym('x2',n_comp);
+    if strcmp(x_class,'casadi.SX')
+        x2 = SX.sym('x2', n_comp);
+    else
+        x2 = MX.sym('x2', n_comp);
+    end
     lbx = [lbx;0*ones(n_comp,1)];
     ubx = [ubx;inf*ones(n_comp,1)];
     x = [x;x2];
@@ -136,7 +146,11 @@ elseif settings.lift_complementarities
         end
     end
     if n_lift_x2 > 0
-        x2_lift = SX.sym('x2_lift',n_lift_x2);
+        if strcmp(x_class,'casadi.SX')
+            x2_lift = SX.sym('x2_lift',n_lift_x2);
+        else
+            x2_lift = MX.sym('x2_lift',n_lift_x2);
+        end
         lbx = [lbx;0*ones(n_lift_x2,1)];
         ubx = [ubx;inf*ones(n_lift_x2 ,1)];
         x = [x;x2_lift];
@@ -218,7 +232,7 @@ h_lbx = max(min(x-lbx,0));
 h_std = max([h_eq;h_ineq_ub;h_ineq_lb;h_ubx;h_lbx]);
 
 
-%% LPEC prepration
+%% Prepare LPEC for checking B-stationarity
 if settings.check_B_stationarity
     % Split into equalites and inequalities
     ind_g_eq = find(lbg == ubg);
@@ -291,8 +305,14 @@ if settings.check_B_stationarity
     dims.ind_x2 = ind_x2;
     dims.n_slacks = 0;
 
-    M = SX.sym('M', 1);
-    y = SX.sym('y', dims.n_comp); % binary variablkes for comp. constraints
+    if strcmp(x_class,'casadi.SX')
+        M = SX.sym('M', 1);
+        y = SX.sym('y', dims.n_comp); % binary variablkes for comp. constraints
+    else
+        M = MX.sym('M', 1);
+        y = MX.sym('y', dims.n_comp); % binary variablkes for comp. constraints
+    end
+
     % Big M reformulation of complementarities
     A_lpec_sym = [-x1+M*y; -x2-M*y];
     A_lpec = A_lpec_sym.jacobian([x;y]);
@@ -327,133 +347,80 @@ if settings.check_B_stationarity
 end
 % lpec_casadi = create_lpec_functions(mpec_casadi,dims,settings,solver_initalization);
 
-
-%% prepare relaxation method
-switch settings.homotopy_parameter_steering
-    case 'Direct_eq'
-        if settings.aggregate_comps
-            g_comp = x1'*x2-sigma*n_comp;
-            lbg_comp = 0*ones(1,1);
-            ubg_comp = 0*ones(1,1);
-        else
-            g_comp = x1.*x2-sigma;
-            lbg_comp = 0*ones(n_comp,1);
-            ubg_comp = 0*ones(n_comp,1);
-        end
-    case 'Direct'
-        if settings.aggregate_comps
-            g_comp = x1'*x2-sigma*n_comp;
-            lbg_comp = -inf*ones(1,1);
-            ubg_comp = 0*ones(1,1);
-        else
-            g_comp = x1.*x2-sigma;
-            lbg_comp = -inf*ones(n_comp,1);
-            ubg_comp = 0*ones(n_comp,1);
-        end
-    case 'Ell_1'
-        g_comp = [];
-        lbg_comp = [];
-        ubg_comp = [];
-        f = f+(x1'*x2)*(sigma)^(-1);
-    case 'Ell_inf'
-        s_eleastic = SX.sym('s_eleastic',1);
-        f = f+(s_eleastic)*(sigma)^(-1);
-        x = [x;s_eleastic];
-        lbx = [lbx;0];
-        ubx = [ubx;max(10,settings.sigma0*10)];
-        x_k = [x_k;settings.sigma0];
-
-        if settings.aggregate_comps
-            g_comp = x1'*x2-s_eleastic*n_comp;
-            lbg_comp = -inf*ones(1,1);
-            ubg_comp = 0*ones(1,1);
-        else
-            g_comp = x1.*x2-s_eleastic;
-            lbg_comp = -inf*ones(n_comp,1);
-            ubg_comp = 0*ones(n_comp,1);
-        end
-    case 'None'
-        settings.max_iter = 1;
-        if settings.aggregate_comps
-            g_comp = x1'*x2;
-            lbg_comp = -inf*ones(1,1);
-            ubg_comp = 0*ones(1,1);
-        else
-            g_comp = x1.*x2;
-            lbg_comp = -inf*ones(n_comp,1);
-            ubg_comp = 0*ones(n_comp,1);
-        end
+%% MINLP reformulation
+if strcmp(x_class,'casadi.SX')
+    M_minlp = SX.sym('M_minlp', 1);
+    y_minlp = SX.sym('y_minlp', dims.n_comp);
+else
+    M_minlp = MX.sym('M_minlp', 1);
+    y_minlp = MX.sym('y_minlp', dims.n_comp);
 end
-
-f_fun =  Function('f_fun',{x,p},{f});
-h_std_fun  = Function('h_std_fun',{x,p},{h_std});
-
-ind_comp = length(g)+1;
-g = [g;g_comp];
-lbg = [lbg; lbg_comp];
-ubg = [ubg; ubg_comp];
-ind_comp = ind_comp:1:length(g);
-
+discrete = [false(n_primal,1); true(n_comp,1)];
+opts_minlp = settings.settings_casadi_nlp;
+opts_minlp.discrete = discrete;
+e = ones(n_comp,1);
+g_comp = [x1-y_minlp*M_minlp; x2-(e-y_minlp)*M_minlp];
+lbg_comp = -inf(2*n_comp,1);
+ubg_comp = zeros(2*n_comp,1);
+p_minlp = [p; M_minlp];
+p0_minlp = [p0; settings.BigM_minlp];
+x_minlp = [x;y_minlp];
+lbx_minlp = [lbx;zeros(n_comp,1)];
+ubx_minlp = [ubx;ones(n_comp,1)];
+f_fun = Function('f_fun',{x,p},{f});
+h_std_fun = Function('h_std_fun',{x,p},{h_std});
+g_minlp = [g;g_comp];
+lbg_minlp = [lbg; lbg_comp];
+ubg_minlp = [ubg; ubg_comp];
 h_comp_constraints_tol_fun = Function('h_comp_constraints_tol_fun',{x,p},{max(min(abs(x1),abs(x2)))});
 if settings.comp_res_bilinear
-    % h_comp_constraints_fun = Function('h_comp_constraints_fun',{x,p},{max(abs(x1.*x2))});
     h_comp_constraints_fun = Function('h_comp_constraints_fun',{x,p},{max(abs(x1).*abs(x2))});
 else
     h_comp_constraints_fun = Function('h_comp_constraints_fun',{x,p},{max(min(abs(x1),abs(x2)))});
 end
-
-%% nlp solver
-nlp = struct('x', x, 'f', f, 'g', g,'p',p);
-solver = nlpsol('solver', 'ipopt', nlp, settings.settings_casadi_nlp);
+%% minlp solver
+minlp_prob = struct('x', x_minlp, 'f', f, 'g', g_minlp,'p',p_minlp);
+solver = nlpsol('minlp_solver', 'bonmin', minlp_prob, opts_minlp);
 n_nlp_total = 0;
-%% main homotopy loop
-cpu_time_iters  = [];
-success  = false;
+
+%% Tnlp solver
+dummy_settings = HomotopySolverOptions();
+opts_tnlp = dummy_settings.settings_casadi_nlp;
+tnlp_prob = struct('x', x, 'f', f, 'g', g,'p',p);
+tnlp_solver = nlpsol('tnlp_solver', 'ipopt', tnlp_prob, opts_tnlp);
+
+%% Solve MINLP
+cpu_time_iters = [];
+success = false;
 problem_infeasible = false;
 max_iterations_reached = false;
-
 if settings.verbose_solver
-    fprintf('iter\t obj\t comp_res\t inf_pr\t\t inf_du\t\t nlp_iters\t\t tau \t\t status\n')
-    fprintf('---------------------------------------------------------------------------------------------------\n')
+    fprintf('----------------------------------- solving MINLP with bonmin -----------------------------------------------\n')
 end
-
 X_outer = [x_k];
 cpu_time_nlp_iter = [];
-%% Main homotopy loop
-t_phase_ii_star = tic;
+x_k_minlp = [x_k; x_k(ind_x1) > x_k(ind_x2)];
+%% Solve MINLP
 
-comp_res_ii =  full(h_comp_constraints_fun(x_k,p0));
+comp_res_ii = full(h_comp_constraints_fun(x_k,p0));
 f_k = full(f_fun(x_k,p0));
 inf_pr_ii = full(h_std_fun(x_k,p0));
-if settings.verbose_solver
-    fprintf('%d \t %2.2e\t %2.2e\t  %2.2e\t  %2.2e\t %d \t\t %2.2e\t \t\t  %s  \n',0,f_k,comp_res_ii,inf_pr_ii,0,0,p0(end),'Inital guess');
-end
-comp_res_ii = 1e3;% avoid termination at feasible but not optimal point
-while (comp_res_ii >= settings.comp_tol && ii <= settings.max_iter)
-    t_nlp_start_ii = tic;
-    solution = solver('x0',x_k,'p',p0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg);
-    t_nlp_end_ii = toc(t_nlp_start_ii);
-    n_nlp_total  = n_nlp_total + 1;
-    cpu_time_nlp_iter = [cpu_time_nlp_iter,t_nlp_end_ii];
-    stats = solver.stats();
-    x_k = full(solution.x);
-    comp_res_ii =  full(h_comp_constraints_fun(x_k,p0));
-    f_k = full(f_fun(x_k,p0));
-    inf_pr_ii = stats.iterations.inf_pr(end);
-    inf_du_ii = stats.iterations.inf_du(end);
-    if settings.verbose_solver
-        fprintf('%d \t %2.2e\t %2.2e\t  %2.2e\t  %2.2e\t %d \t\t %2.2e\t \t\t  %s  \n',ii,f_k,comp_res_ii,inf_pr_ii,inf_du_ii,stats.iter_count,p0(end),(stats.return_status));
-    end
-    p0(end) = settings.kappa*p0(end);
-    ii = ii+1;
-    X_outer = [X_outer, x_k];
-    if isequal(stats.return_status,'Infeasible_Problem_Detected') || isequal(stats.return_status,'Error_In_Step_Computation')
-        break;
-    end
-end
+t_phase_ii_start = tic;
+t_nlp_start_ii = tic;
+solution = solver('x0',x_k_minlp,'p',p0_minlp,'lbx',lbx_minlp,'ubx',ubx_minlp,'lbg',lbg_minlp,'ubg',ubg_minlp);
+t_nlp_end_ii = toc(t_nlp_start_ii);
+cpu_time_phase_ii = toc(t_phase_ii_start);
+n_nlp_total = n_nlp_total + 1;
+cpu_time_nlp_iter = [cpu_time_nlp_iter,t_nlp_end_ii];
+stats = solver.stats();
+x_k_minlp = full(solution.x);
+x_k = x_k_minlp(1:n_primal);
+comp_res_ii = full(h_comp_constraints_fun(x_k,p0));
+f_k = full(f_fun(x_k,p0));
+X_outer = [X_outer, x_k];
 
 %% status of last iter
-if isequal(stats.return_status,'Solve_Succeeded') || isequal(stats.return_status,'Solved_To_Acceptable_Level') || isequal(stats.return_status,'Search_Direction_Becomes_Too_Small')
+if isequal(stats.return_status,'SUCCESS')
     success = true;
     solver_message = 'Stationary point was found successfuly.';
 else
@@ -467,15 +434,11 @@ if isequal(stats.return_status,'Maximum_Iterations_Exceeded')
 end
 
 if comp_res_ii > settings.comp_tol
-    if ii == settings.max_iter
-        max_iterations_reached = true;
-        solver_message = 'Maximum number of iterations reached.';
-    end
     success = false;
     solver_message = 'Complementarity tolerance not satisfied.';
 end
 
-if isequal(stats.return_status,'Infeasible_Problem_Detected')
+if isequal(stats.return_status,'INFEASIBLE')
     problem_infeasible  = true;
     success = false;
     solver_message = 'Infeasible problem detected.';
@@ -486,7 +449,13 @@ elseif isequal(stats.return_status,'Restoration_Failed')
 else
     problem_infeasible  = false;
 end
-cpu_time_phase_ii = toc(t_phase_ii_star);
+
+if full(h_comp_constraints_tol_fun(x_k,p0)) <= settings.tol && ~success
+    success = true;
+    solver_message = 'Feasible point found.';
+end
+
+
 
 %% biactive
 G_res = full(G_fun(x_k(1:n_primal_non_lifted),p0));
@@ -513,19 +482,16 @@ dims.n_comp = n_comp;
 x_k_before_tnlp = x_k;
 %%
 % ----------------------------------- MULTIPLIER BASED STAT -------------------------------------
-N_TNLP = 3; % max attemps to solve a TNLP;
+N_TNLP = 1; % max attemps to solve a TNLP;
 ii = 1;
 tol_ell_inf = full(h_comp_constraints_tol_fun(x_k,p0));
 % tol_active = max(2*settings.tol_active*1e3,2*tol_ell_inf);
 tol_active = settings.tol_active;
+
 if settings.compute_tnlp_stationary_point && success && settings.lift_complementarities && ~settings.problem_is_lpec
     fprintf('----------------------------------- determining stationarity -----------------------------------------------\n')
 
-    % Solve a TNLP:
-    ubg(ind_comp) = +inf;  % remove upper bound on bilinear terms to avodi multipliers
-    if strcmp(settings.homotopy_parameter_steering,'Ell_1') || strcmp(settings.homotopy_parameter_steering,'Ell_inf')
-        ubx(end) = +inf;
-    end
+    % Create TNLP
     while  ii <= N_TNLP
         active_set_estimate_k = find_active_sets(x_k, dims, tol_active);
         ubx(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
@@ -534,28 +500,36 @@ if settings.compute_tnlp_stationary_point && success && settings.lift_complement
         ubx(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
         % n_biactive = sum(active_set_estimate_k.I_00)
 
-        solution = solver('x0',x_k,'p',p0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg);
+        solution = tnlp_solver('x0',x_k,'p',p0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg);
+        stats_tnlp = tnlp_solver.stats();
         lambda_x_tnlp = full(solution.lam_x);
         x_tnlp = full(solution.x);
         f_tnlp = full(solution.f);
         comp_res_tnlp =  full(h_comp_constraints_fun(x_k,p0));
-        inf_pr_tnlp = stats.iterations.inf_pr(end);
-        inf_du_tnlp = stats.iterations.inf_du(end);
-        settings.tol_active = tol_active;
-        if settings.verbose_solver
-            fprintf('%d \t %2.2e\t %2.2e\t  %2.2e\t  %2.2e\t %d \t\t %2.2e\t \t\t  %s  \n',ii,f_tnlp,comp_res_tnlp,inf_pr_tnlp,inf_du_tnlp,stats.iter_count,0,(stats.return_status));
-        end
-        % fprintf('\t\t ||x_tnlp - x_k|| = %2.2e, |f_tnlp-f_k| = %2.2e \n', norm(x_tnlp-x_k,inf),abs(f_tnlp-f_k))
-        if norm(x_tnlp-x_k,inf) <= 1e-6 || abs(f_tnlp-f_k)/abs(f_k) <= 1e-3 || ii == N_TNLP
-            [multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_tnlp,lambda_x_tnlp,dims,settings);
-            n_biactive = sum(active_set_estimate_k.I_00);
-            if ii~=N_TNLP
-                x_k = x_tnlp;
+        try
+            inf_pr_tnlp = stats_tnlp.iterations.inf_pr(end);
+            inf_du_tnlp = stats_tnlp.iterations.inf_du(end);
+
+            settings.tol_active = tol_active;
+            if settings.verbose_solver
+                fprintf('%d \t %2.2e\t %2.2e\t  %2.2e\t  %2.2e\t %d \t\t %2.2e\t \t\t  %s  \n',ii,f_tnlp,comp_res_tnlp,inf_pr_tnlp,inf_du_tnlp,stats.iter_count,0,(stats.return_status));
             end
+            % fprintf('\t\t ||x_tnlp - x_k|| = %2.2e, |f_tnlp-f_k| = %2.2e \n', norm(x_tnlp-x_k,inf),abs(f_tnlp-f_k))
+            if norm(x_tnlp-x_k,inf) <= 1e-6 || abs(f_tnlp-f_k)/abs(f_k) <= 1e-3 || ii == N_TNLP
+                [multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_tnlp,lambda_x_tnlp,dims,settings);
+                n_biactive = sum(active_set_estimate_k.I_00);
+                if ii~=N_TNLP
+                    x_k = x_tnlp;
+                end
+                break;
+            else
+                tol_active = 0.1*tol_active;
+                ii = ii+1;
+            end
+        catch
+            % well not a stat point
+            success = false;
             break;
-        else
-            tol_active = 0.1*tol_active;
-            ii = ii+1;
         end
     end
     if ~strcmp(multiplier_based_stationarity,'X')
@@ -570,7 +544,7 @@ end
 f_lpec = 1;
 rho_TR = 1e-3;
 
-if ~settings.problem_is_lpec && success
+if ~settings.problem_is_lpec && success && stats_tnlp.success
     settings_lpec = LPECSolverOptions();
     N_LPEC = 3;
     ii = 1;
@@ -617,7 +591,7 @@ if ~settings.problem_is_lpec && success && ~b_stationarity
         ubx(dims.ind_x2(active_set_estimate_k.I_plus_0)) = 0;
         ubx(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
         ubx(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
-        
+
         solution = solver('x0',x_k,'p',p0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg);
         x_tnlp = full(solution.x);
         f_tnlp = full(solution.f);
@@ -644,7 +618,7 @@ if ~settings.problem_is_lpec && success && ~b_stationarity
         end
         while ii <= N_LPEC
             lpec.rho_TR = rho_TR;
-            [results_lpec,stats_lpec] = lpec_solver(lpec,settings_lpec);
+            [results_lpec, stats_lpec] = lpec_solver(lpec,settings_lpec);
             f_lpec = results_lpec.f_opt;
             d_lpec = results_lpec.d_lpec;
             % if abs(f_lpec) <= settings.tol_B_stationarity
@@ -665,7 +639,7 @@ if strcmp(multiplier_based_stationarity,'S')
 end
 if settings.verbose_summary
     fprintf('\n');
-    print_iter_summary_scholtes(f_k,inf_pr_ii,comp_res_ii,solver_message,multiplier_based_stationarity,b_stationarity,n_biactive,f_lpec,rho_TR);
+    print_iter_summary_minlp(f_k,inf_pr_ii,comp_res_ii,solver_message,multiplier_based_stationarity,b_stationarity,n_biactive,f_lpec,rho_TR);
 end
 
 % if strcmp(multiplier_based_stationarity,'X')

@@ -15,6 +15,10 @@ function mpecs = generate_nonlinear_mpec_problem_set(problem_set_name,settings,d
 %       x>=0
 %       0 <=w<= w_ub
 
+% n_x number of noncomplementarity variablex (x0)
+% n_y number of complementarity variablex (x1,x3)
+% n = n_x+2n_y total number of variables
+
 % LPEC generator is inspired by:
 %
 % [1] Hu, Jing, John E. Mitchell, Jong-Shi Pang, Kristin P. Bennett, and Gautam Kunapuli.
@@ -60,6 +64,7 @@ if settings.random_problem_sizes
     N_per_problem = N_rand_prob;
     figure
     n_var = n_x_vec+2*n_y_vec;
+    subplot(121)
     scatter(n_var,n_ineq_vec*(1*settings.s_ineq_copy));
     hold on
     scatter(n_var,n_x_vec);
@@ -67,6 +72,14 @@ if settings.random_problem_sizes
     xlabel('$n+2m$ - number of variables')
     ylabel('Number of constraints')
     legend({'Inequality constraints','Equality constraints'},'Location','northwest')
+    axis equal
+    subplot(122)
+    scatter(n_var,n_y_vec);
+    hold on
+    scatter(n_var,n_ineq_vec*(1+settings.s_ineq_copy)+n_x_vec);
+    hold on
+    xlabel('$n+2m$ - number of variables')
+    legend({'$m$ number of complementairt variables','Total num. of constraints'},'Location','northwest')
     axis equal
 % elseif settings.random_problem_sizes_individual
 %     n_x_vec = round(n_x_min+n_x_max*rand(N_rand_prob,1));

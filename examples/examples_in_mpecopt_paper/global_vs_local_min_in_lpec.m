@@ -1,4 +1,6 @@
 clear; clc; close all
+nice_plot_colors
+latexify_plot()
 
 %% Very good example where global optimum leads to more iterations, and reduced lpec is useful!
 % Example  MPCC * requires a large penalty parametres
@@ -30,7 +32,7 @@ solver_settings.consider_all_complementarities_in_lpec = 1;
 solver_settings.rho_TR_phase_ii_init = 1.5;
 solver_settings.TR_reducing_factor = 0.5;
 solver_settings.compute_tnlp_stationary_point  = 0;
-solver_settings.plot_lpec_iterate = 1;
+solver_settings.plot_lpec_iterate = 0;
 solver_settings.stop_if_S_stationary = 0;
 
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
@@ -41,55 +43,63 @@ fprintf('solution is (%2.4f,%2.4f) \n',x_opt(1),x_opt(2));
 fprintf('objective is %2.4f \n',f_opt );
 fprintf('\n');
 %%
-nice_plot_colors
-tt = 0:1:5;
-figure
-plot(tt,tt*0,'k','LineWidth',1.5);
-hold on
-grid on
-plot(tt*0,tt,'k','LineWidth',1.5);
-axis equal
-plot(stats_active_set.iter.X_outer(1,:),stats_active_set.iter.X_outer(2,:),'rs')
-plot(stats_active_set.iter.X_lpec(1,:),stats_active_set.iter.X_lpec(2,:),'bd')
-
-
-if 1
-    for i = 1:size(stats_active_set.iter.X_outer,2)-1
-        quiver(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i), stats_active_set.iter.X_outer(1,i+1)-stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i+1)-stats_active_set.iter.X_outer(2,i), 1, 'Color',matlab_red,'LineWidth',2);
-        text(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i),num2str(i));
-    end
-else
-    for i = 1:size(stats_active_set.iter.X_outer,2)-1
-        quiver(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i), -2*(a*stats_active_set.iter.X_outer(1,i)-1),-2*(stats_active_set.iter.X_outer(2,i)-1), 0.5, 'Color',matlab_red,'LineWidth',2);
-        text(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i),num2str(i));
-    end
-end
-xlim([-1 5])
-ylim([-1 5])
-
-% Generate grid points for x and y
-x = linspace(-1, 5, 50);
-y = linspace(-1, 5, 50);
-% Create a grid of points
-[X, Y] = meshgrid(x, y);
-% Evaluate the function at each point in the grid
-Z = f_sym(X, Y);
-% Plot the contour lines
-contour(X, Y, Z, 30);
-xlabel('x');
-ylabel('y');
+% tt = 0:1:5;
+% figure
+% plot(tt,tt*0,'k','LineWidth',1.5);
+% hold on
+% grid on
+% plot(tt*0,tt,'k','LineWidth',1.5);
+% axis equal
+% plot(stats_active_set.iter.X_outer(1,:),stats_active_set.iter.X_outer(2,:),'rs')
+% plot(stats_active_set.iter.X_lpec(1,:),stats_active_set.iter.X_lpec(2,:),'bd')
+%
+%
+% if 1
+%     for i = 1:size(stats_active_set.iter.X_outer,2)-1
+%         quiver(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i), stats_active_set.iter.X_outer(1,i+1)-stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i+1)-stats_active_set.iter.X_outer(2,i), 1, 'Color',matlab_red,'LineWidth',2);
+%         text(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i),num2str(i));
+%     end
+% else
+%     for i = 1:size(stats_active_set.iter.X_outer,2)-1
+%         quiver(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i), -2*(a*stats_active_set.iter.X_outer(1,i)-1),-2*(stats_active_set.iter.X_outer(2,i)-1), 0.5, 'Color',matlab_red,'LineWidth',2);
+%         text(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i),num2str(i));
+%     end
+% end
+% xlim([-1 5])
+% ylim([-1 5])
+%
+% % Generate grid points for x and y
+% x = linspace(-1, 5, 50);
+% y = linspace(-1, 5, 50);
+% % Create a grid of points
+% [X, Y] = meshgrid(x, y);
+% % Evaluate the function at each point in the grid
+% Z = f_sym(X, Y);
+% % Plot the contour lines
+% contour(X, Y, Z, 30);
+% xlabel('x');
+% ylabel('y');
 %%
 % x_opt = [1;0];
-x_opt = [0;1];
+
+plot_case = 3;
 
 figure
-latexify_plot()
-filename = 'global_local_mpec1.pdf';
+filename = ['global_local_mpec' num2str(plot_case) '.pdf'];
 linewidht = 2;
 fontsize = 16;
 markersize = 10;
-rho = 1.2;
-rho = 0.5;
+switch plot_case
+    case 1
+        rho = 0.6;
+        x_opt = [0;1];
+    case 2
+        rho = 1.2;
+        x_opt = [0;1];
+    otherwise
+        rho = 1.2;
+        x_opt = [1;0];
+end
 % Given function
 % Define grid
 [x1, x2] = meshgrid(-1.2:0.01:3, -1.2:0.01:3);
@@ -102,14 +112,17 @@ dx1 = 2*(a*x1-1);
 dx2 = 2*(x2-1);
 tt = 0:0.5:3;
 f_grad = -f_grad_sym(x_opt(1),x_opt(2));
-quiver(x_opt(1),x_opt(2),f_grad(1),f_grad(2),'LineWidth',linewidht+0.5,'AutoScaleFactor',0.2,'Color',matlab_red)
-
-% case 1
-quiver(x_opt(1),x_opt(2),0,0,'LineWidth',linewidht+0.5,'AutoScaleFactor',1,'Color',matlab_magenta)
-% case 2
-% quiver(x_opt(1),x_opt(2),1.2,-1,'LineWidth',linewidht+0.5,'AutoScaleFactor',1,'Color',matlab_magenta)
-% case 3
-% quiver(x_opt(1),x_opt(2),-1,1.2,'LineWidth',linewidht+0.5,'AutoScaleFactor',1,'Color',matlab_magenta)
+switch plot_case
+    case 1
+        quiver(x_opt(1),x_opt(2),f_grad(1),f_grad(2),'LineWidth',linewidht+0.5,'AutoScaleFactor',0.2,'Color',matlab_red)
+        quiver(x_opt(1),x_opt(2),0,0,'LineWidth',linewidht+0.5,'AutoScaleFactor',1,'Color',matlab_magenta)
+    case 2
+        quiver(x_opt(1),x_opt(2),f_grad(1),f_grad(2),'LineWidth',linewidht+0.5,'AutoScaleFactor',0.2,'Color',matlab_red)
+        quiver(x_opt(1),x_opt(2),1.2,-1,'LineWidth',linewidht+0.5,'AutoScaleFactor',1,'Color',matlab_magenta)
+    case 3
+        quiver(x_opt(1),x_opt(2),f_grad(1),f_grad(2),'LineWidth',linewidht+0.6,'AutoScaleFactor',0.5,'Color',matlab_red)
+        quiver(x_opt(1),x_opt(2),-1,1.2,'LineWidth',linewidht+0.5,'AutoScaleFactor',1,'Color',matlab_magenta)
+end
 
 
 plot(tt*0,tt,'k','LineWidth',linewidht)
@@ -129,27 +142,29 @@ plot(tt*0+x(1)+rho,tt,'color',matlab_blood_red,'LineWidth',linewidht+0.5,'Handle
 plot(tt*0+x(1)-rho,tt,'color',matlab_blood_red,'LineWidth',linewidht+0.5,'HandleVisibility','off');
 
 x_bar = [1,0];
-f_bar = ['$f(\bar{x}) = ' sprintf('%2.2f$',f_sym(x_bar(1),x_bar(2)))];
-text(0.9,+0.3, '$\bar{x}$','FontSize',fontsize)
-% text(1,-0.5, f_bar,'FontSize',fontsize)
-
 x_hat = [0,1];
-f_hat = ['$f(\hat{x}) = ' sprintf('%2.2f$',f_sym(x_hat(1),x_hat(2)))];
+text(1.03,+0.25, '$\bar{x}$','FontSize',fontsize)
 text(-0.25,1, '$\hat{x}$','FontSize',fontsize)
-% text(-0.5,1.2, f_hat,'FontSize',fontsize)
-% Latexify labels
+f_bar = ['$f(\bar{x}) = ' sprintf('%2.2f$',f_sym(x_bar(1),x_bar(2)))];
+f_hat = ['$f(\hat{x}) = ' sprintf('%2.2f$',f_sym(x_hat(1),x_hat(2)))];
+
+
 xlabel('$x_1$', 'Interpreter', 'latex');
 ylabel('$x_2$', 'Interpreter', 'latex');
 axis equal
 xlim([-1.2 3])
 ylim([-1.2 3])
-% legend({'$f(x)$', '$\nabla f(x^*)$', '$d$','$0\leq x_1 \perp x_2\geq 0$' },'BackgroundAlpha',0.9)
-legend({'$f(x)$', '$-\nabla f(\bar{x})$', '$d$' },'BackgroundAlpha',0.9)
+
+switch plot_case
+    case {1,2}
+        legend({'$f(x)$', '$-\nabla f(\hat{x})$', '$d$' },'BackgroundAlpha',0.9)
+    case 3
+        legend({'$f(x)$', '$-\nabla f(\bar{x})$', '$d$' },'BackgroundAlpha',0.9)
+end
 set(gca,'FontSize',fontsize)
 exportgraphics(gcf, filename, 'ContentType', 'vector')
 
-
-
+% legend({'$f(x)$', '$\nabla f(x^*)$', '$d$','$0\leq x_1 \perp x_2\geq 0$' },'BackgroundAlpha',0.9)
 
 
 

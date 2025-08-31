@@ -9,7 +9,7 @@ classdef HomotopySolverOptions < handle
         % Stopping criteria/tolernaces
         max_iter(1,1) double {mustBeInteger, mustBePositive} = 15;
         tol(1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
-        tol_active(1,1) double {mustBeReal, mustBeNonnegative} = 1e-9; % below this treshold a constraint is considered to be active
+        tol_active(1,1) double {mustBeReal, mustBeNonnegative} = 1e-10; % below this treshold a constraint is considered to be active
         comp_tol(1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
         plot_mpec_multipliers(1,1) logical = false;
         initial_comp_all_zero(1,1) logical = false;

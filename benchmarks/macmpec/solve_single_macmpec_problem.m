@@ -10,6 +10,8 @@ problame_name = 'qpec-200-2';
 % problame_name =  'ralph1';
 % problame_name =  'pack-rig-32';
 % problame_name =  'pack-rig-8';
+problame_name = 'gnash15m.nl';
+problame_name = 'pack-rig2p-16.nl';
 % 
 ii_prob = find(contains({macmpec_json.name},problame_name));
 
@@ -33,6 +35,7 @@ f = mpec.f_fun(mpec.w);
 g = mpec.g_fun(mpec.w);
 G = mpec.G_fun(mpec.w);
 H = mpec.H_fun(mpec.w);
+
 for ii=1:length(H)
     if mpec.lbH(ii) ~= -inf && mpec.ubH(ii) ~= inf
         Hi = H(ii);
@@ -65,37 +68,43 @@ mpec = struct('x', w, 'f', f, 'g', g,'G',G,'H',H);
 solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg, 'ubg',ubg);
 clc
 fprintf('Problem info, n_w = %d, n_g = %d, n_comp = %d, name = %s\n', length(w),length(g),length(G),name)
-%% homotopy
+
+%% Homotopy solver
 settings_homotopy = HomotopySolverOptions();
-settings_homotopy.initial_comp_all_zero = 0;
-settings_homotopy.homotopy_parameter_steering = "Direct";
-% settings_homotopy.comp_tol = 1e-8;
-% settings_homotopy.max_iter = 30;
-
 [result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
-w_opt = full(result_homotopy.x);
 f_opt_homotopy = full(result_homotopy.f);
-% solver_initalization.w0 = w_opt;
-%% mpecopt
-fprintf('Problem info, n_w = %d, n_g = %d, n_comp = %d, name = %s\n', length(w),length(g),length(G),name)
+w_opt_homotopy = full(result_homotopy.x);
+
+%% MINLP solver
+settings_minlp = MINLPSolverOptions();
+settings_minlp.settings_casadi_nlp.bonmin.time_limit = 10;
+% settings_minlp.settings_casadi_nlp.bonmin.node_limit = 5;
+% settings_minlp.settings_casadi_nlp.bonmin.solution_limit = 5;
+% settings_minlp.settings_casadi_nlp.bonmin.max_consecutive_failures = 5;
+[result_minlp,stats_minlp] = mpec_minlp_solver(mpec,solver_initalization,settings_minlp);
+f_opt_minlp = full(result_minlp.f);
+w_opt_minlp = full(result_minlp.x);
+
+%% MPECopt solver
 solver_settings = mpecopt.Options();
-solver_settings.settings_lpec.lpec_solver = 'Highs_casadi';
+solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
+solver_settings.settings_lpec.lpec_solver = 'Gurobi';
+% solver_settings.initialization_strategy = "FeasibilityEll1General";
+solver_settings.rho_TR_phase_i_init = 10;
+solver_settings.tol_active = 1e-6;
+solver = mpecopt.Solver(mpec, solver_settings);
+[result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);
+w_opt_mpecopt = full(result_mpecopt.x);
+f_opt_mpecopt = full(result_mpecopt.f);
 
-[results,stats] = mpec_optimizer(mpec, solver_initalization, solver_settings);
-w_opt_mpecopt = full(results.x);
-f_opt_mpecopt = full(results.f);
-
-%% Print result details 
-if 1
-    fprintf('\n');
-    fprintf('Problem info,name = %s, n_w = %d, n_g = %d, n_comp = %d\n',name,length(w),length(g),length(G))
-    fprintf('\n-------------------------------------------------------------------------------\n');
-    fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Sucess\t Stat. type\n')
-    fprintf('-------------------------------------------------------------------------------\n');
-    fprintf('homotopy \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
-    fprintf('mpecopt \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_mpecopt,stats.comp_res,stats.n_biactive,stats.cpu_time_total,stats.success,stats.multiplier_based_stationarity)
-    fprintf('\n');
-    fprintf(' || w_homotopy - w_mpecopt || = %2.2e \n',norm(w_opt-w_opt_mpecopt));
-end
-
+%% Results comparison
+fprintf('\n-------------------------------------------------------------------------------\n');
+fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Success\t Stat. type\n')
+fprintf('-------------------------------------------------------------------------------\n');
+fprintf('Reg     \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
+fprintf('MINLP \t\t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_minlp,stats_minlp.comp_res,stats_minlp.n_biactive,stats_minlp.cpu_time_total,stats_minlp.success,stats_minlp.multiplier_based_stationarity)
+fprintf('MPECopt \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_mpecopt,stats_mpecopt.comp_res,stats_mpecopt.n_biactive,stats_mpecopt.cpu_time_total,stats_mpecopt.success,stats_mpecopt.multiplier_based_stationarity)
+fprintf('-------------------------------------------------------------------------------\n');
+fprintf('||w_reg - w_mpec|| = %2.2e \n',norm(w_opt_homotopy-w_opt_mpecopt));
+fprintf('||w_minlp - w_mpec|| = %2.2e \n',norm(w_opt_minlp-w_opt_mpecopt));
 

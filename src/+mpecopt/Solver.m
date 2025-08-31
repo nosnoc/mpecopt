@@ -653,6 +653,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             stats.cpu_time_nlp_phase_ii = sum(stats.iter.cpu_time_nlp_phase_ii_iter);
             stats.cpu_time_nlp = stats.cpu_time_nlp_phase_i+stats.cpu_time_nlp_phase_ii;
             stats.cpu_time_globalization = sum(stats.iter.cpu_time_globalization_iter);
+            stats.cpu_time_solvers = stats.cpu_time_nlp+stats.cpu_time_lpec;
+
             if isempty(stats.iter.cpu_time_nlp_iter)
                 stats.iter.cpu_time_nlp_iter = nan;
             end

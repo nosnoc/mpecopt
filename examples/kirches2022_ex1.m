@@ -30,34 +30,39 @@ lbg = [ ];
 ubg = [ ];
 
 mpec = struct('x', x, 'f', f, 'g', g,'G',G,'H',H,'p',p);
-solver_initalization = struct('x0', x0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg,'p0',p0);
-% Scholtes
-settings = HomotopySolverOptions();
-[result_scholtes,stats_scholtes] = mpec_homotopy_solver(mpec,solver_initalization,settings);
-f_opt_scholtes = full(result_scholtes.f);
-x_opt_scholtes = full(result_scholtes.x);
+solver_initialization = struct('x0', x0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg,'p0',p0);
 
-% x0 = w_opt_scholtes;
+%% Homotopy solver
+settings_homotopy = HomotopySolverOptions();
+settings_homotopy.homotopy_parameter_steering = "Direct";
+[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initialization,settings_homotopy);
+f_opt_homotopy = full(result_homotopy.f);
+w_opt_homotopy = full(result_homotopy.x);
+
+%% MINLP solver
+settings_minlp = MINLPSolverOptions();
+[result_minlp,stats_minlp] = mpec_minlp_solver(mpec,solver_initialization,settings_minlp);
+f_opt_minlp = full(result_minlp.f);
+w_opt_minlp = full(result_minlp.x);
+
+%% MPECopt solver
 solver_settings = mpecopt.Options();
-% solver_settings.initialization_strategy = "TakeInitialGuessDirectly";
-solver_settings.consider_all_complementarities_in_lpec = true;
-solver_settings.tol_B_stationarity = 1e-8;
-solver_settings.rho_TR_phase_ii_init = 1e-2;
-% solver_initalization.x0 = x0;
-
+solver_settings.consider_all_complementarities_in_lpec = false;
+solver_settings.settings_lpec.lpec_solver = 'Gurobi';
 solver = mpecopt.Solver(mpec, solver_settings);
-[result_active_set,stats_active_set] = solver.solve(solver_initalization);
+[result_mpecopt,stats_mpecopt] = solver.solve(solver_initialization);
+w_opt_mpecopt = full(result_mpecopt.x);
+f_opt_mpecopt = full(result_mpecopt.f);
 
 
-x_opt_active_set = full(result_active_set.x);
-f_opt_active_set = full(result_active_set.f);
-
-
+%% Results comparison
 fprintf('\n-------------------------------------------------------------------------------\n');
-fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Sucess\t Stat. type\n')
+fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Success\t Stat. type\n')
 fprintf('-------------------------------------------------------------------------------\n');
-fprintf('Scholtes \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_scholtes,stats_scholtes.comp_res,stats_scholtes.n_biactive,stats_scholtes.cpu_time_total,stats_scholtes.success,stats_scholtes.multiplier_based_stationarity)
-fprintf('Active Set \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_active_set,stats_active_set.comp_res,stats_active_set.n_biactive,stats_active_set.cpu_time_total,stats_active_set.success,stats_active_set.multiplier_based_stationarity)
-fprintf('\n');
-fprintf(' || x_scholtes - x_active_set || = %2.2e \n',norm(x_opt_scholtes-x_opt_active_set));
-
+fprintf('Reg     \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_homotopy,stats_homotopy.comp_res,stats_homotopy.n_biactive,stats_homotopy.cpu_time_total,stats_homotopy.success,stats_homotopy.multiplier_based_stationarity)
+fprintf('MINLP \t\t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_minlp,stats_minlp.comp_res,stats_minlp.n_biactive,stats_minlp.cpu_time_total,stats_minlp.success,stats_minlp.multiplier_based_stationarity)
+fprintf('MPECopt \t %2.2e \t %2.2e \t\t %d \t\t\t %2.2f \t\t\t\t %d\t %s\n',f_opt_mpecopt,stats_mpecopt.comp_res,stats_mpecopt.n_biactive,stats_mpecopt.cpu_time_total,stats_mpecopt.success,stats_mpecopt.multiplier_based_stationarity)
+fprintf('-------------------------------------------------------------------------------\n');
+fprintf('||w_reg - w_mpec|| = %2.2e \n',norm(w_opt_homotopy-w_opt_mpecopt));
+fprintf('||w_minlp - w_mpec|| = %2.2e \n',norm(w_opt_minlp-w_opt_mpecopt));
+fprintf('Solution: (%2.2f,%2.2f) \n',w_opt_mpecopt(1),w_opt_mpecopt(2));
