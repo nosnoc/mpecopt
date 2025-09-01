@@ -12,8 +12,15 @@ problame_name = 'qpec-200-2';
 % problame_name =  'pack-rig-8';
 problame_name = 'gnash15m.nl';
 problame_name = 'pack-rig2p-16.nl';
+
+N_biactive = [168 80 83 71 85 73 120 117 105 108];
+
+
+
 % 
 ii_prob = find(contains({macmpec_json.name},problame_name));
+ii_prob = N_biactive(10); % A stationarity in reg! looks problematic!
+ii_prob = N_biactive(10);
 
 
 fname = fullfile(macmpec_json(ii_prob).folder, macmpec_json(ii_prob).name);
@@ -71,6 +78,7 @@ fprintf('Problem info, n_w = %d, n_g = %d, n_comp = %d, name = %s\n', length(w),
 
 %% Homotopy solver
 settings_homotopy = HomotopySolverOptions();
+settings_homotopy.homotopy_parameter_steering = 'Direct';
 [result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
 f_opt_homotopy = full(result_homotopy.f);
 w_opt_homotopy = full(result_homotopy.x);
@@ -90,8 +98,8 @@ solver_settings = mpecopt.Options();
 solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
 solver_settings.settings_lpec.lpec_solver = 'Gurobi';
 % solver_settings.initialization_strategy = "FeasibilityEll1General";
-solver_settings.rho_TR_phase_i_init = 10;
-solver_settings.tol_active = 1e-6;
+% solver_settings.rho_TR_phase_i_init = 10;
+% solver_settings.tol_active = 1e-6;
 solver = mpecopt.Solver(mpec, solver_settings);
 [result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);
 w_opt_mpecopt = full(result_mpecopt.x);

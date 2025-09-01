@@ -809,8 +809,9 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 solver_initialization.x0(dims.ind_x1) = G_eval;
                 solver_initialization.x0(dims.ind_x2) = H_eval;
             else
-                solver_initialization.x0(dims.ind_nonscalar_x1) = G_eval(dims.ind_nonscalar_x1);
-                solver_initialization.x0(dims.ind_nonscalar_x2) = H_eval(dims.ind_nonscalar_x2);
+                % TODO: HERE is some BUG! 
+                % solver_initialization.x0(dims.ind_nonscalar_x1) = G_eval(dims.ind_nonscalar_x1);
+                % solver_initialization.x0(dims.ind_nonscalar_x2) = H_eval(dims.ind_nonscalar_x2);
             end
             %% Split into equalites and inequalities
             % TODO@Anton?: Get rid of this unfold?
