@@ -46,7 +46,7 @@ end
 
 N_interesting = [];
 for ii=1:length(macmpec_json)
-    if mpecs(ii).n_w <= 250
+    if mpecs(ii).n_w <= 150
         N_interesting = [N_interesting; ii];
     end
 end
@@ -71,7 +71,7 @@ solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
 
 default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
-default_opts1.settings_lpec.lpec_solver = "Gurobi";
+default_opts1.settings_lpec.lpec_solver = "Highs_casadi";
 default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";
 % default_opts1.initialization_strategy = "FeasibilityEll1General";
 
@@ -84,7 +84,7 @@ default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";
 
 default_opts2 = mpecopt.Options();
 default_opts2.solver_name = solver_names{2};
-default_opts2.settings_lpec.lpec_solver = "Gurobi";
+default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
 default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
 default_opts2.settings_lpec.stop_lpec_at_feasible = true;
 % default_opts2.rho_TR_phase_i_init = 1e-3;
@@ -114,7 +114,7 @@ opts = {default_opts1, default_opts2, default_opts3, ...
 
 %% Create data struct
 N_experiments = [1, 3:6];
-N_experiments = [2];
+N_experiments = [1 2 4];
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 
 %%  Pick which results to plot

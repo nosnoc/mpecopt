@@ -77,9 +77,9 @@ if settings.random_problem_sizes
     scatter(n_var,n_y_vec);
     hold on
     scatter(n_var,n_ineq_vec*(1+settings.s_ineq_copy)+n_x_vec);
-    hold on
+    scatter(n_var,n_x_vec);
     xlabel('$n+2m$ - number of variables')
-    legend({'$m$ number of complementairt variables','Total num. of constraints'},'Location','northwest')
+    legend({'$m$ number of complementairt variables','Total num. of constraints', 'Non. comp. vars.'},'Location','northwest')
     axis equal
 % elseif settings.random_problem_sizes_individual
 %     n_x_vec = round(n_x_min+n_x_max*rand(N_rand_prob,1));

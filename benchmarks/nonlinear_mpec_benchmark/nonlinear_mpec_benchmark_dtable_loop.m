@@ -30,7 +30,8 @@ dstruct.max_cpu_time_nlp_phase_ii  = [];
 dstruct.max_cpu_time_lpec = [];
 dstruct.problem_infeasible = [];
 dstruct.f_lpec = [];
-% LPEC solver statistics
+
+%% Lpec details
 lpec_dstruct = struct;
 lpec_dstruct.solver_name = [];
 lpec_dstruct.nodecount_phase_i = {};
@@ -39,6 +40,8 @@ lpec_dstruct.baritercount_phase_i = {};
 lpec_dstruct.baritercount_phase_ii= {};
 lpec_dstruct.itercount_phase_i = {};
 lpec_dstruct.itercount_phase_ii= {};
+lpec_dstruct.cpu_time_lpec_phase_i = {};
+lpec_dstruct.cpu_time_lpec_phase_ii = {};
 
 
 
@@ -76,7 +79,16 @@ for ii = N_experiments
         mpec_struct = struct('x',w,'f',f,'g',g,'G',G,'H',H);
         solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg,'ubg',ubg);
         % to add non-mpecsol solver you can add ifs here
-        [result,stats] = solver_functions{ii}(mpec_struct,solver_initalization,options);
+        if isequal(solver_functions{ii},@mpec_optimizer)
+            solver = mpecopt.Solver(mpec_struct, options);
+            [result,stats] = solver.solve(solver_initalization);
+        else
+            [result,stats] = solver_functions{ii}(mpec_struct,solver_initalization,options);
+        end
+
+        % if stats.success~=1
+        %     keyboard;
+        % end
 
         dstruct.solver_name = [dstruct.solver_name; string(name)];
         dstruct.problem_name = [dstruct.problem_name; string(mpec_name)];
@@ -111,6 +123,8 @@ for ii = N_experiments
         lpec_dstruct.baritercount_phase_ii{end+1} = stats.iter.baritercount_phase_ii;
         lpec_dstruct.itercount_phase_i{end+1}   = stats.iter.itercount_phase_i;
         lpec_dstruct.itercount_phase_ii{end+1}  = stats.iter.itercount_phase_ii;
+        lpec_dstruct.cpu_time_lpec_phase_i{end+1}   = stats.iter.cpu_time_lpec_phase_i_iter;
+        lpec_dstruct.cpu_time_lpec_phase_ii{end+1}  = stats.iter.cpu_time_lpec_phase_ii_iter;
 
         dstruct.n_biactive = [dstruct.n_biactive; stats.n_biactive];
         dstruct.f_lpec = [dstruct.f_lpec; stats.f_lpec];

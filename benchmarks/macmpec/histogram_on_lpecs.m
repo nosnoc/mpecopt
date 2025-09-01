@@ -3,6 +3,7 @@ close all; clc;
 dtable;
 lpec_dstruct;
 
+plot_cpu = false;
 % Filter by solver and success
 solver = "MPECopt-Reg-Early";
 solver = "MPECopt-Reg-Gurobi";
@@ -23,10 +24,15 @@ function y = replace_zeros(x)
 end
 
 % Postprocess nodecount cells
-process_cells = @(C) cellfun(@(x) ...
+process_cells_cummulative = @(C) cellfun(@(x) ...
     (isempty(x) * 0) + ...             % empty → 0
     (~isempty(x) * (sum(replace_zeros(x)))), ...
     C);
+
+process_cells = @(C) cellfun(@(x) ...
+    (isempty(x) * 0) + ...             % empty → 0
+    (~isempty(x) * ((replace_zeros(x)))), ...
+    C, UniformOutput=false);
 
 % Postprocess cpu time cells
 process_cpu = @(C) cellfun(@(x) ...
@@ -48,24 +54,51 @@ function y = convert_vec(x)
 end
 
 % ------------------------
-% Nodecount statistics
+% Nodecount statistics (for each lpec call seperatalyover solver calls)
 % ------------------------
-nc_i  = process_cells(lpec_dstruct.nodecount_phase_i(idx));
-nc_ii = process_cells(lpec_dstruct.nodecount_phase_ii(idx));
+nc_i  = cell2mat(process_cells(lpec_dstruct.nodecount_phase_i(idx)));
+nc_ii = cell2mat(process_cells(lpec_dstruct.nodecount_phase_ii(idx)));
+nc_tot = [nc_i, nc_ii];
+
+% Histograms (nodecounts)
+figure; 
+subplot(131)
+histogram(nc_i, 'BinMethod', 'integers');
+title('Nodecount Phase I - each LPEC call'); xlabel('Nodes'); ylabel('Frequency'); grid on;
+% xticks(min(nc_i):max(nc_i));
+
+subplot(132)
+histogram(nc_ii, 'BinMethod', 'integers');
+title('Nodecount Phase II - each LPEC call'); xlabel('Nodes'); ylabel('Frequency'); grid on;
+xticks(min(nc_ii):max(nc_ii));
+
+subplot(133)
+histogram(nc_tot, 'BinMethod', 'integers');
+title('Total Nodecount - each LPEC call'); xlabel('Nodes'); ylabel('Frequency'); grid on;
+% xticks(min(nc_tot):max(nc_tot));
+
+
+
+% ------------------------
+% Nodecount statistics (cummulative over solver calls)
+% ------------------------
+nc_i  = process_cells_cummulative(lpec_dstruct.nodecount_phase_i(idx));
+nc_ii = process_cells_cummulative(lpec_dstruct.nodecount_phase_ii(idx));
 nc_tot = nc_i + nc_ii;
 
 % Histograms (nodecounts)
 figure; 
+subplot(131)
 histogram(nc_i, 'BinMethod', 'integers');
 title('Nodecount Phase I'); xlabel('Nodes'); ylabel('Frequency'); grid on;
 % xticks(min(nc_i):max(nc_i));
 
-figure; 
+subplot(132)
 histogram(nc_ii, 'BinMethod', 'integers');
 title('Nodecount Phase II'); xlabel('Nodes'); ylabel('Frequency'); grid on;
 xticks(min(nc_ii):max(nc_ii));
 
-figure; 
+subplot(133)
 histogram(nc_tot, 'BinMethod', 'integers');
 title('Total Nodecount'); xlabel('Nodes'); ylabel('Frequency'); grid on;
 % xticks(min(nc_tot):max(nc_tot));
@@ -86,20 +119,23 @@ cpu_ii = process_cpu(lpec_dstruct.cpu_time_lpec_phase_ii(idx));
 cpu_tot = cpu_i + cpu_ii;
 
 % Histograms (CPU times)
-figure; 
-histogram(cpu_i);
-title('CPU Time Phase I'); xlabel('Time [s]'); ylabel('Frequency'); grid on;
+if plot_cpu
+    figure;
+    subplot(131)
+    histogram(cpu_i);
+    title('CPU Time Phase I'); xlabel('Time [s]'); ylabel('Frequency'); grid on;
 
-figure; 
-histogram(cpu_ii);
-title('CPU Time Phase II'); xlabel('Time [s]'); ylabel('Frequency'); grid on;
+    subplot(132)
+    histogram(cpu_ii);
+    title('CPU Time Phase II'); xlabel('Time [s]'); ylabel('Frequency'); grid on;
 
-figure; 
-histogram(cpu_tot);
-title('Total CPU Time'); xlabel('Time [s]'); ylabel('Frequency'); grid on;
+    subplot(133)
+    histogram(cpu_tot);
+    title('Total CPU Time'); xlabel('Time [s]'); ylabel('Frequency'); grid on;
+end
 
 % ------------------------
-% Iteration plot for max problem (nodecounts)
+%% Iteration plot for max problem (nodecounts)
 % ------------------------
 vec_i  = lpec_dstruct.nodecount_phase_i{max_idx};
 vec_ii = lpec_dstruct.nodecount_phase_ii{max_idx};
@@ -111,12 +147,13 @@ x_i  = 1:length(vec_i);
 x_ii = (length(vec_i)+1):(length(vec_i)+length(vec_ii));
 
 figure;
-semilogy(x_i, vec_i, '-o', 'LineWidth', 1.5, 'DisplayName','Phase I'); hold on;
-semilogy(x_ii, vec_ii, '-s', 'LineWidth', 1.5, 'DisplayName','Phase II');
+subplot(121)
+stairs(x_i, vec_i, '-o', 'LineWidth', 1.5, 'DisplayName','Phase I'); hold on;
+stairs(x_ii, vec_ii, '-s', 'LineWidth', 1.5, 'DisplayName','Phase II');
 ylim([0 (max([vec_i, vec_ii])+1)*1.1])
 xlabel('Iteration');
 ylabel('Nodecount');
-title(sprintf('Nodecount per Iteration (%s)', dtable.problem_name{max_idx}));
+% title(sprintf('Nodecount per Iteration (%s)', dtable.problem_name{max_idx}));
 legend('show'); grid on;
 
 % ------------------------
@@ -131,9 +168,9 @@ if isempty(cpu_vec_ii), cpu_vec_ii = 0; end
 x_ci  = 1:length(cpu_vec_i);
 x_cii = (length(cpu_vec_i)+1):(length(cpu_vec_i)+length(cpu_vec_ii));
 
-figure;
-plot(x_ci, cpu_vec_i, '-o', 'LineWidth', 1.5, 'DisplayName','Phase I'); hold on;
-plot(x_cii, cpu_vec_ii, '-s', 'LineWidth', 1.5, 'DisplayName','Phase II');
+subplot(122)
+stairs(x_ci, cpu_vec_i, '-o', 'LineWidth', 1.5, 'DisplayName','Phase I'); hold on;
+stairs(x_cii, cpu_vec_ii, '-s', 'LineWidth', 1.5, 'DisplayName','Phase II');
 xlabel('Iteration');
 ylabel('CPU Time [s]');
 title(sprintf('CPU Time per Iteration (%s)', dtable.problem_name{max_idx}));

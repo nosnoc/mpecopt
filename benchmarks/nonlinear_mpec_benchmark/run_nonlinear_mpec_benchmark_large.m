@@ -62,8 +62,8 @@ dimensions.n_x_min = 10;
 % dimensions.n_x_min = 10;
 % 
 % 
-dimensions.N_rand_prob = 2; % number of problems per objective
-dimensions.n_x_max = 30;
+dimensions.N_rand_prob = 1; % number of problems per objective
+dimensions.n_x_max = 100;
 dimensions.n_x_min = 10;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
@@ -78,25 +78,40 @@ length(mpecs)
 
 
 %% Solver settings
-%% Define list of solvers to use
+
 solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS", "MPECopt-$\ell_1$-Gurobi", ...
+                  "Reg" , "NLP", ...
+                  "MINLP"];
+
+
+
+solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-Early", "MPECopt-$\ell_1$-Gurobi", ...
                   "Reg" , "NLP", ...
                   "MINLP"];
 
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
                     @mpec_homotopy_solver,@mpec_homotopy_solver,...
                     @mpec_minlp_solver};
-
 default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
 default_opts1.settings_lpec.lpec_solver = "Gurobi";
 default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";
+% default_opts1.initialization_strategy = "FeasibilityEll1General";
+
+% default_opts2 = mpecopt.Options();
+% default_opts2.solver_name = solver_names{2};
+% default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
+% default_opts2.settings_lpec.stop_lpec_at_feasible = true;
+% default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
+% default_opts2.rho_TR_phase_i_init = 1e-3;
 
 default_opts2 = mpecopt.Options();
 default_opts2.solver_name = solver_names{2};
-default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
+default_opts2.settings_lpec.lpec_solver = "Gurobi";
 default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
-default_opts2.rho_TR_phase_i_init = 1e-3;
+default_opts2.settings_lpec.stop_lpec_at_feasible = true;
+% default_opts2.rho_TR_phase_i_init = 1e-3;
+
 
 default_opts3 = mpecopt.Options();
 default_opts3.solver_name = solver_names{3};
@@ -121,7 +136,7 @@ opts = {default_opts1, default_opts2, default_opts3, ...
        minlp_opts}; % list of options to pass to mpecsol (option structs)
 
 %% Create data struct
-N_experiments = [1 5];
+N_experiments = [1 2];
 
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot

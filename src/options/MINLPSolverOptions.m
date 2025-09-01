@@ -42,11 +42,7 @@ classdef MINLPSolverOptions< handle
 
     methods
         function obj = MINLPSolverOptions()
-            % see
-
-
-
-            default_tol = 1e-12;
+            default_tol = 1e-10;
             % --------- MINLP Specific settings
             % bonmin: https://www.coin-or.org/Bonmin/option_pages/options_list_bonmin.html
             obj.settings_casadi_nlp.error_on_fail = false;

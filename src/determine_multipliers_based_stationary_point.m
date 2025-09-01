@@ -12,11 +12,31 @@ eta_x2(abs(eta_x2) < settings.tol) = 0;
 
 active_set_estimate_k = find_active_sets(x, dims, settings.tol_active);
 ind_I_00 = find(active_set_estimate_k.I_00);
+
+% Isolate multipliers for biactives
+
+eta_x1_biactive = eta_x1(ind_I_00);
+eta_x2_biactive = eta_x2(ind_I_00);
+max_mult = max(norm([eta_x1_biactive;eta_x2_biactive],inf), 1e-10);
+
+% Rescale to max (sensitive for M-stationarity)
+eta_x1_biactive = eta_x1_biactive./max_mult; 
+eta_x2_biactive = eta_x2_biactive./max_mult; 
+
+if max_mult > 1e3
+    tol_M = 1e-3;
+else
+    tol_M = settings.tol_B_stationarity*10;
+end
+
+
+% R
+
 % print_iter_line();
 if isempty(ind_I_00)
     output_message = sprintf('S - stationary, %d biactive constraints. ', length(ind_I_00));
     multiplier_based_stationarity = 'S';
-elseif (all(eta_x1(ind_I_00) >= 0 & eta_x2(ind_I_00) >= 0) )
+elseif (all(eta_x1_biactive >= 0 & eta_x2_biactive >= 0) )
     output_message = sprintf('S - stationary, %d biactive constraints. ', length(ind_I_00));
     multiplier_based_stationarity = 'S';
     if all(eta_x1.*eta_x2 > 0)
@@ -25,13 +45,15 @@ elseif (all(eta_x1(ind_I_00) >= 0 & eta_x2(ind_I_00) >= 0) )
         output_message = [output_message ,' Upper level strict complementarity does not hold.'];
     end
 else
-    if all( (eta_x1(ind_I_00) > 0 & eta_x2(ind_I_00) > 0) | (eta_x1(ind_I_00).*eta_x2(ind_I_00) == 0))
+    % if all( (eta_x1_biactive > 0 & eta_x2_biactive > 0) | (eta_x1_biactive.*eta_x2_biactive == 0))
+    if all( (eta_x1_biactive > 0 & eta_x2_biactive > 0) | abs(eta_x1_biactive.*eta_x2_biactive)<= tol_M)
+        % account for imperfect zeros
         output_message = sprintf('M - stationary, %d biactive constraints.', length(ind_I_00));
         multiplier_based_stationarity = 'M';
-    elseif all(eta_x1(ind_I_00).*eta_x2(ind_I_00) >=0)
+    elseif all(eta_x1_biactive.*eta_x2_biactive >=0)
         output_message = sprintf('C - stationary, %d biactive constraints.', length(ind_I_00));
         multiplier_based_stationarity = 'C';
-    elseif  all(eta_x1(ind_I_00) >= 0 | eta_x2(ind_I_00) >=0)
+    elseif  all(eta_x1_biactive >= 0 | eta_x2_biactive >=0)
         output_message = sprintf('A - stationary, %d biactive constraints.', length(ind_I_00));
         multiplier_based_stationarity = 'A';
     else
@@ -88,7 +110,7 @@ if settings.plot_mpec_multipliers
                 hh = patch(hh_x,hh_y,'k');
                 hh.FaceAlpha = 0.1;
         end
-        plot(eta_x1(ind_I_00),eta_x2(ind_I_00),'.','LineWidth',2.5,'MarkerSize',15)
+        plot(eta_x1_biactive,eta_x2_biactive,'.','LineWidth',2.5,'MarkerSize',15)
         grid on
         xlabel('$\nu$','Interpreter','latex')
         ylabel('$\xi$','Interpreter','latex')

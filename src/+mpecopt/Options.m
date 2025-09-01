@@ -131,7 +131,7 @@ classdef Options < handle
             obj.settings_casadi_nlp.verbose = false;
             obj.settings_casadi_nlp.ipopt.max_iter = 3000;
             obj.settings_casadi_nlp.ipopt.bound_relax_factor = 0;
-            obj.settings_casadi_nlp.ipopt.bound_relax_factor = 1e-16;
+            % obj.settings_casadi_nlp.ipopt.bound_relax_factor = 1e-16;
             obj.settings_casadi_nlp.ipopt.honor_original_bounds = 'yes';
             obj.settings_casadi_nlp.ipopt.tol = default_tol;
             obj.settings_casadi_nlp.ipopt.dual_inf_tol = default_tol;
@@ -147,9 +147,9 @@ classdef Options < handle
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_frac = 1e-6;
             % obj.settings_casadi_nlp.ipopt.warm_start_entire_iterate = 'yes';
             obj.settings_casadi_nlp.ipopt.linear_solver = 'ma27'; % mumps, ma27, ma57
-            obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'relax_bounds';  % make_parameter  make_constraint relax_bounds
-            obj.settings_casadi_nlp.detect_simple_bounds = true;
             % obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'relax_bounds';  % make_parameter  make_constraint relax_bounds
+            obj.settings_casadi_nlp.detect_simple_bounds = true;
+            obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'make_parameter';  % make_parameter  make_constraint relax_bounds
             
             % obj.opts_casadi_nlp.snopt = struct();
             % obj.opts_casadi_nlp.worhp = struct();

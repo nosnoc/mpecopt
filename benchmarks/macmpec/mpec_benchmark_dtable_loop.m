@@ -99,7 +99,7 @@ for ii = N_experiments
         else
             [result,stats] = solver_functions{ii}(mpec_struct,solver_initalization,options);
         end
-
+        % 
         % if stats.success~=1
         %     keyboard;
         % end

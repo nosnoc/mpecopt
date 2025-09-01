@@ -1482,13 +1482,17 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         end
                         % --------------------------- Check if B-stationary point found --------------------------
                         % h_total_k = full(mpec_casadi.h_total_fun(x_k,p0));
-                        % if ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'})
-                        %     bnlp_solved = true;
-                        % else
-                        %     bnlp_solved = false;
-                        % end
+                        if  l_k > 1 
+                            if ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'}) || (h_total_k <= opts.tol)
+                                bnlp_solved = true; % succes of bnlp iter in phase ii
+                            else
+                                bnlp_solved = false; % failed in phase ii or not good enough
+                            end
+                        else
+                            bnlp_solved = true; % from phase 1
+                        end
                         % if (h_total_k <= opts.tol) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
-                        if ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
+                        if bnlp_solved && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
                             if opts.reset_lpec_objective
                                 d_lpec_k_l = d_lpec_k_l*0; % if the current point is feasible, and the objective is zero, then d = 0 is also a solution of the lpec (occurs if a solution is not on the verties of the lp)
                                 f_lin_opt_k_l = 0;
@@ -1762,28 +1766,54 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
             % --------------- compute multiplier-based stationary points --------------
             multiplier_based_stationarity_debug = stats.multiplier_based_stationarity;
+            tol_active = 1e-6;
+            N_TNLP = 6; % max tnlp solves 
+            ii = 1;
+            tol_active_default = opts.tol_active;
+            opts.tol_active = tol_active;
             if (stats.success || k==opts.max_iter) && opts.compute_tnlp_stationary_point && phase_ii
                 % if ~strcmp(opts.piece_nlp_strategy,'TNLP')
                 % resolve TNLP for correct multipliers
-                lbx_bnlp_k = solver_initialization.lbx; ubx_bnlp_k = solver_initialization.ubx;  % reset bounds of bnlp.
-                lbg_tnlp_k = solver_initialization.lbg; ubg_tnlp_k = solver_initialization.ubg;
-                initial_strategy = opts.piece_nlp_strategy;
-                opts.piece_nlp_strategy = 'TNLP'; % used to get tnlp active sets
-                nabla_f_k = full(mpec_casadi.nabla_f_fun(x_k,p0));
-                active_set_estimate_k = find_active_sets_piece_nlp(x_k,nabla_f_k,y_lpec_k_l,dims,opts,opts.tol_active);
-                ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
-                ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_plus_0)) = 0;
-                ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
-                ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
-                opts.piece_nlp_strategy = initial_strategy;
-                % end
-                t_nlp_start = tic;
-                results_nlp = mpec_casadi.solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
-                cpu_time_nlp_k_l = toc(t_nlp_start);
-                x_k_multi = full(results_nlp.x);
-                lambda_x_k = full(results_nlp.lam_x);
-                [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,opts);
+                while  ii <= N_TNLP
+                    lbx_bnlp_k = solver_initialization.lbx; ubx_bnlp_k = solver_initialization.ubx;  % reset bounds of bnlp.
+                    lbg_tnlp_k = solver_initialization.lbg; ubg_tnlp_k = solver_initialization.ubg;
+                    initial_strategy = opts.piece_nlp_strategy;
+                    opts.piece_nlp_strategy = 'TNLP'; % used to get tnlp active sets
+                    nabla_f_k = full(mpec_casadi.nabla_f_fun(x_k,p0));
+                    active_set_estimate_k = find_active_sets_piece_nlp(x_k,nabla_f_k,y_lpec_k_l,dims,opts,opts.tol_active);
+                    ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
+                    ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_plus_0)) = 0;
+                    ubx_bnlp_k(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
+                    ubx_bnlp_k(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
+                    opts.piece_nlp_strategy = initial_strategy;
+                    % end
+                    t_nlp_start = tic;
+                    results_nlp = mpec_casadi.solver('x0',x_k,'p', p0, 'lbx', lbx_bnlp_k, 'ubx', ubx_bnlp_k,'lbg', lbg_tnlp_k, 'ubg', ubg_tnlp_k);
+                    cpu_time_nlp_k_l = toc(t_nlp_start);
+                    x_k_multi = full(results_nlp.x);
+                    f_tnlp = full(results_nlp.f);
+                    lambda_x_k = full(results_nlp.lam_x);
+                    % if settings.verbose_solver
+                    %     fprintf('%d \t %2.2e\t %2.2e\t  %2.2e\t  %2.2e\t %d \t\t %2.2e\t \t\t  %s  \n',ii,f_tnlp,comp_res_tnlp,inf_pr_tnlp,inf_du_tnlp,stats.iter_count,0,(stats.return_status));
+                    % end
+                    fprintf('\t\t ||x_tnlp - x_k|| = %2.2e, |f_tnlp-f_k| = %2.2e \n', norm(x_k_multi-x_k,inf),abs(f_tnlp-f_k))
+                    if norm(x_k_multi-x_k,inf) <= 1e-6 || abs(f_tnlp-f_k)/abs(f_k) <= 1e-3 || ii == N_TNLP
+                        [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,opts);
+                        n_biactive = sum(active_set_estimate_k.I_00);
+                        % if ii~=N_TNLP
+                            % x_k = x_tnlp;
+                        % end
+                        break;
+                    else
+                        tol_active = 0.1*tol_active;
+                        opts.tol_active = tol_active;
+                        ii = ii+1;
+                    end
+                    % [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,opts);
+                end
             end
+            settings.tol_active = tol_active_default;  % reset
+
 
             % Debug falure of stationary point computation
             if ~strcmp(multiplier_based_stationarity_debug,'X') && opts.debug_mode_on &&  ~isequal(multiplier_based_stationarity_debug,stats.multiplier_based_stationarity)

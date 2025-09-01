@@ -50,16 +50,29 @@ plot_settings.save_plot = 1;
 results = 1;
 switch results
     case 1
-        S = load('macmpec_general_30-Oct-2024');
-        
-        S = load('macmpec_general_07-Nov-2024');
+        % S = load('macmpec_general_30-Oct-2024');      
+        % S = load('macmpec_general_07-Nov-2024');
+        S = load('macmpec_general_31-Aug-2025');
         dtable = S.dtable;
         % solver_names  = ["MPECopt-Gurobi", "MPECopt-HiGHS",...
         %     "MPECopt-Simple", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
 
 
-        solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS",...
-                      "MPECopt-$\ell_1$-Gurobi", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
+        % solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS",...
+        %               "MPECopt-$\ell_1$-Gurobi", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
+
+        solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS", "MPECopt-$\ell_1$-Gurobi", ...
+                  "Reg" , "NLP", ...
+                  "MINLP"];
+
+        solver_names = ["MINLP"
+                        "MPECopt-$\ell_1$-Gurobi"
+                        "MPECopt-Reg-Gurobi"
+                        "NLP"
+                        "Reg"
+                        "MINLP"
+                        ];
+
 
         % solver_names  = ["MPECopt-Gurobi", "MPECopt-Reg-HiGHS",...
                       % "MPECopt-$\ell_1$-Gurobi", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
@@ -71,7 +84,7 @@ switch results
         plot_settings.solved_in_phase_i = 1;
         %% Who is not B stationary?
         dtable_ii = dtable(dtable.solver_name == solver_names{1},:);
-        dtable_jj = dtable(dtable.solver_name == solver_names{4},:);
+        dtable_jj = dtable(dtable.solver_name == solver_names{3},:);
         ind_not_B = find(dtable_jj.success == 1 & dtable_jj.b_stationarity == 0);
         % For Reg
         % diff in obj
@@ -100,7 +113,7 @@ switch results
         %% Solved by gurobi and not by highs
         dtable_ii = dtable(dtable.solver_name == solver_names{1},:);
         dtable_jj = dtable(dtable.solver_name == solver_names{2},:);
-        dtable_jj.problem_name(dtable_ii.success == 1 & dtable_jj.success == 0)
+        % dtable_jj.problem_name(dtable_ii.success == 1 & dtable_jj.success == 0)
 
     case 2
 

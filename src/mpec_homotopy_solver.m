@@ -513,11 +513,13 @@ dims.n_comp = n_comp;
 x_k_before_tnlp = x_k;
 %%
 % ----------------------------------- MULTIPLIER BASED STAT -------------------------------------
-N_TNLP = 3; % max attemps to solve a TNLP;
+N_TNLP = 6; % max attemps to solve a TNLP;
 ii = 1;
 tol_ell_inf = full(h_comp_constraints_tol_fun(x_k,p0));
 % tol_active = max(2*settings.tol_active*1e3,2*tol_ell_inf);
-tol_active = settings.tol_active;
+tol_active_default = settings.tol_active;
+tol_active  = 1e-6; % tnlp
+% tol_active  = 1e2; % tnlp
 if settings.compute_tnlp_stationary_point && success && settings.lift_complementarities && ~settings.problem_is_lpec
     fprintf('----------------------------------- determining stationarity -----------------------------------------------\n')
 
@@ -526,6 +528,7 @@ if settings.compute_tnlp_stationary_point && success && settings.lift_complement
     if strcmp(settings.homotopy_parameter_steering,'Ell_1') || strcmp(settings.homotopy_parameter_steering,'Ell_inf')
         ubx(end) = +inf;
     end
+
     while  ii <= N_TNLP
         active_set_estimate_k = find_active_sets(x_k, dims, tol_active);
         ubx(dims.ind_x1(active_set_estimate_k.I_0_plus)) = 0;
@@ -545,7 +548,8 @@ if settings.compute_tnlp_stationary_point && success && settings.lift_complement
         if settings.verbose_solver
             fprintf('%d \t %2.2e\t %2.2e\t  %2.2e\t  %2.2e\t %d \t\t %2.2e\t \t\t  %s  \n',ii,f_tnlp,comp_res_tnlp,inf_pr_tnlp,inf_du_tnlp,stats.iter_count,0,(stats.return_status));
         end
-        % fprintf('\t\t ||x_tnlp - x_k|| = %2.2e, |f_tnlp-f_k| = %2.2e \n', norm(x_tnlp-x_k,inf),abs(f_tnlp-f_k))
+        fprintf('\t\t ||x_tnlp - x_k|| = %2.2e, |f_tnlp-f_k| = %2.2e \n', norm(x_tnlp-x_k,inf),abs(f_tnlp-f_k))
+        % Terminate TNLP loop
         if norm(x_tnlp-x_k,inf) <= 1e-6 || abs(f_tnlp-f_k)/abs(f_k) <= 1e-3 || ii == N_TNLP
             [multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_tnlp,lambda_x_tnlp,dims,settings);
             n_biactive = sum(active_set_estimate_k.I_00);
@@ -554,13 +558,23 @@ if settings.compute_tnlp_stationary_point && success && settings.lift_complement
             end
             break;
         else
+            % drop out greatest biactive
+            % tol_active = (1-1e-9)*max(max(abs(x_k(dims.ind_x1(active_set_estimate_k.I_00))),x_k(dims.ind_x2(active_set_estimate_k.I_00))));
             tol_active = 0.1*tol_active;
             ii = ii+1;
         end
     end
-    if ~strcmp(multiplier_based_stationarity,'X')
+    % if ~strcmp(multiplier_based_stationarity,'X')
+    % end
+end
+
+if success
+    if ~(norm(x_tnlp-x_k,inf) <= 1e-6 || abs(f_tnlp-f_k)/abs(f_k) <= 1e-3)
+        multiplier_based_stationarity = 'X'; % failed to achieve accuracy
     end
 end
+
+settings.tol_active = tol_active_default;  % reset
 
 % if strcmp(multiplier_based_stationarity,'W')
 %     keyboard;
@@ -617,7 +631,7 @@ if ~settings.problem_is_lpec && success && ~b_stationarity
         ubx(dims.ind_x2(active_set_estimate_k.I_plus_0)) = 0;
         ubx(dims.ind_x1(active_set_estimate_k.I_00)) = 0;
         ubx(dims.ind_x2(active_set_estimate_k.I_00)) = 0;
-        
+
         solution = solver('x0',x_k,'p',p0,'lbx',lbx,'ubx',ubx,'lbg',lbg,'ubg',ubg);
         x_tnlp = full(solution.x);
         f_tnlp = full(solution.f);
