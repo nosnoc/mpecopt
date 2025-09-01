@@ -36,7 +36,10 @@ function  [results,stats] = lpec_solver(lpec,settings)
 % lpec.vtype = vtype;
 % lpec.vtype_num = vtype_num;
 import casadi.*
-
+%% init some stats:
+stats.itercount = 0; % number simplex iters
+stats.baritercount = 0; % nuber of barrier iters
+stats.nodecount = 0; % number of nodes in BnB
 
 %% Prepare LPEC
 % add the boundso of the inaries
@@ -113,9 +116,9 @@ switch settings.lpec_solver
         params.IntFeasTol = 1e-9;
         params.TimeLimit = settings.max_time;
         params.OptimalityTol = 1e-9;
-        if settings.stop_lpec_at_feasible
-            params.SolutionLimit = 1;
-            % params.MIPGap = 1;
+        if settings.stop_lpec_at_feasible && settings.is_in_phase_i
+            % params.SolutionLimit = 1;
+            params.MIPGap = 1;
         end
         % params.ObjScale = -0.5;     % https://www.gurobi.com/documentation/current/refman/objscale.html#parameter:ObjScale
         % params.ScaleFlag=0; % default -1, % https://www.gurobi.com/documentation/current/refman/scaleflag.html#parameter:ScaleFlag
@@ -145,12 +148,16 @@ switch settings.lpec_solver
         if settings.solve_lpec_with_cutoff
             options.ObjectiveCutOff  = settings.cutoff;
         end
+        if settings.stop_lpec_at_feasible && settings.is_in_phase_i
+            options.RelativeGapTolerance = 1; % stop at first integer feasible sol
+        end
+
         % GapTolerance = 1e-16;
-        GapTolerance  = 1e-4;
+        % GapTolerance  = 1e-4;
         options.MaxNodes = settings.max_nodes;
         options.ConstraintTolerance = 1e-9;
         % options.AbsoluteGapTolerance = GapTolerance;
-        options.RelativeGapTolerance = GapTolerance;
+        % options.RelativeGapTolerance = GapTolerance;
         options.MaxTime = settings.max_time;
         model.options = options;
         model.solver = 'intlinprog';
@@ -175,6 +182,9 @@ switch settings.lpec_solver
         highs_opts.highs.log_to_console = false;
         % highs_opts.highs.simplex_strategy = 4;
         % highs_opts.highs.error_on_fail = false;
+        if settings.stop_lpec_at_feasible && settings.is_in_phase_i
+             highs_opts.highs.mip_rel_gap = 1;
+        end
 
         % highs_opts.highs.mip_max_nodes = settings.max_nodes;
         % highs_opts.highs.time_limit = settings.max_time;
@@ -184,6 +194,7 @@ switch settings.lpec_solver
         % highs_opts.highs.primal_feasibility_tolerance = 1e-9;
         % highs_opts.highs.dual_feasibility_tolerance = 1e-9;        
         highs_opts.highs.mip_heuristic_effort = 0.1;
+        
 
 
         % highs_opts.highs.simplex_strategy = 4;
@@ -250,9 +261,14 @@ end
 switch settings.lpec_solver
     case "Gurobi"
         try
-            t_gurobi_start = tic;
+            gurobi_time = tic;
             result_gurobi = gurobi(model, params);
-            cpu_time_gurobi = toc(t_gurobi_start);
+            stats.itercount = result_gurobi.itercount;
+            stats.baritercount = result_gurobi.baritercount;
+            stats.nodecount = result_gurobi.nodecount;
+            cpu_time_gurobi = toc(gurobi_time);
+            % todo; add node and itter coumt, and add them tho phase i iter
+            % and node, 
         catch
             model;
             % keyboard;
@@ -262,8 +278,7 @@ switch settings.lpec_solver
             % results.y_lpec = lpec.y_lpec*nan;
             % results.f_opt = nan;
             % stats.lpec_solution_exists = false;
-            result_gurobi.nodecount = 0;
-            stats.solver_message = 'error in lpec';
+            result_gurobi.nodecount = nan;
             result_gurobi.runtime = nan;
             cpu_time_gurobi = nan;
         end
@@ -273,23 +288,23 @@ switch settings.lpec_solver
             results.y_lpec = result_gurobi.x(end-lpec.dims.n_auxiliary+1:end);
             results.f_opt = result_gurobi.objval;
             stats.lpec_solution_exists = true;
-            stats.nodecount = result_gurobi.nodecount;
+            % stats.nodecount = result_gurobi.nodecount;
         else
             results.d_lpec = lpec.d_lpec*nan;
             results.y_lpec = lpec.y_lpec*nan;
             results.f_opt = nan;
             stats.lpec_solution_exists = false;
-            stats.nodecount = result_gurobi.nodecount;
+            % stats.nodecount = result_gurobi.nodecount;
         end
         stats.solver_message = result_gurobi.status;
         % stats.cpu_time = result_gurobi.runtime;
         stats.cpu_time  = cpu_time_gurobi;
     case {"Highs", "Matlab"}
         try
-            tic
+            intlinprog_time = tic;
             % [x,f_opt,statsu,output] = intlinprog(model);
             [x,f_opt,status,output] = intlinprog(f_lpec,intcon,A_ineq_matlab,b_ineq_matlab,A_eq_matlab,b_eq_matlab,lb,ub,x0,options);
-            cpu_time = toc;
+            cpu_time = toc(intlinprog_time);
         catch
             model;
             % keyboard;
@@ -324,14 +339,14 @@ switch settings.lpec_solver
         stats.solver_message_extended = output.message;
         stats.cpu_time = cpu_time;
     case "Highs_casadi"
-        tic
+        higs_casadi_time = tic;
         try
             r = lpsol('g', c_highs, 'a', A_highs, 'lbx', lb, 'ubx', ub, 'lba', lbA_highs, 'uba', ubA_highs);
             highs_success = strcmp(lpsol.stats.return_status, 'Optimal');
         catch
             highs_success  = false;
         end
-        cpu_time = toc;
+        cpu_time = toc(higs_casadi_time);
 
 
         if highs_success
@@ -350,8 +365,11 @@ switch settings.lpec_solver
             stats.lpec_solution_exists = false;
         end
         stats.nodecount = lpsol.stats.n_call_solver;
+        stats.itercount = lpsol.stats.iter_count;
+        stats.baritercount = lpsol.stats.ipm_iteration_count;
         % stats.cpu_time =  lpsol.stats.t_wall_solver;
         stats.cpu_time  = cpu_time;
+
         stats.solver_message =  lpsol.stats.unified_return_status;
     case {'Reg','Ell_1','Ell_inf','Nlp'}
         % reg
@@ -390,7 +408,7 @@ switch settings.lpec_solver
         end
         stats.cpu_time = stats.cpu_time_total;
         stats.solver_message = stats.return_status;
-        stats.nodecount = 0;
+        % stats.nodecount = 0;
     case {"Projected_Gradient"}
         d_lpec = zeros(lpec.dims.n_primal,1);
         d0 = zeros(lpec.dims.n_primal-2*lpec.dims.n_comp,1);

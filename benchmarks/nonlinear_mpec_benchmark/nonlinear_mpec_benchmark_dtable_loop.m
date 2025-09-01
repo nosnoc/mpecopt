@@ -30,6 +30,17 @@ dstruct.max_cpu_time_nlp_phase_ii  = [];
 dstruct.max_cpu_time_lpec = [];
 dstruct.problem_infeasible = [];
 dstruct.f_lpec = [];
+% LPEC solver statistics
+lpec_dstruct = struct;
+lpec_dstruct.solver_name = [];
+lpec_dstruct.nodecount_phase_i = {};
+lpec_dstruct.nodecount_phase_ii= {};
+lpec_dstruct.baritercount_phase_i = {};
+lpec_dstruct.baritercount_phase_ii= {};
+lpec_dstruct.itercount_phase_i = {};
+lpec_dstruct.itercount_phase_ii= {};
+
+
 
 % dstruct.solver_message = [;]
 dstruct.prob_num = [];
@@ -91,7 +102,16 @@ for ii = N_experiments
         dstruct.cpu_time_lpec = [dstruct.cpu_time_lpec; stats.cpu_time_lpec];
         dstruct.cpu_time_lpec_phase_i = [dstruct.cpu_time_lpec_phase_i; stats.cpu_time_lpec_phase_i];
         dstruct.cpu_time_lpec_phase_ii = [dstruct.cpu_time_lpec_phase_ii; stats.cpu_time_lpec_phase_ii];       
-        
+
+        % detailed lpec statistis
+        lpec_dstruct.solver_name = [lpec_dstruct.solver_name; string(name)];
+        lpec_dstruct.nodecount_phase_i{end+1}   = stats.iter.nodecount_phase_i;
+        lpec_dstruct.nodecount_phase_ii{end+1}  = stats.iter.nodecount_phase_ii;
+        lpec_dstruct.baritercount_phase_i{end+1}  = stats.iter.baritercount_phase_i;
+        lpec_dstruct.baritercount_phase_ii{end+1} = stats.iter.baritercount_phase_ii;
+        lpec_dstruct.itercount_phase_i{end+1}   = stats.iter.itercount_phase_i;
+        lpec_dstruct.itercount_phase_ii{end+1}  = stats.iter.itercount_phase_ii;
+
         dstruct.n_biactive = [dstruct.n_biactive; stats.n_biactive];
         dstruct.f_lpec = [dstruct.f_lpec; stats.f_lpec];
 
@@ -119,3 +139,4 @@ end
 %% Check results and plot
 dtable = struct2table(dstruct);
 save(results_name,"dtable");
+save([results_name '_lpec_details'],"lpec_dstruct");

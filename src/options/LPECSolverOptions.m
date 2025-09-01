@@ -14,6 +14,7 @@ classdef LPECSolverOptions< handle
         solve_lpec_with_cutoff (1,1) logical = false;
         stop_lpec_at_feasible (1,1) logical = false;
         trust_region_on_slacks  (1,1) logical = false; % Do the slack variables for the feasbility trasformation have a TR constraint?
+        is_in_phase_i (1,1) logical = true; % tell lpec solver which phase it is
         homotopy_solver_settings 
 
         % settings for custom nlp based lpec methods (Scholtes, Ell1, Ell_inf)
@@ -23,6 +24,7 @@ classdef LPECSolverOptions< handle
         sigma0(1,1) double {mustBeReal, mustBeNonnegative} = 1;
         kappa(1,1) double {mustBeReal, mustBePositive} = 0.1;
 
+        
     end
 
     methods

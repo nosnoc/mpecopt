@@ -450,7 +450,7 @@ else
     problem_infeasible  = false;
 end
 
-if full(h_comp_constraints_tol_fun(x_k,p0)) <= settings.tol && ~success
+if max(full(h_std_fun(x_k,p0)),full(h_comp_constraints_tol_fun(x_k,p0))) <= settings.tol && ~success
     success = true;
     solver_message = 'Feasible point found.';
 end
@@ -692,7 +692,14 @@ stats.iter.cpu_time_lpec_phase_ii_iter = 0;
 stats.iter.cpu_time_nlp_phase_i_iter = 0;
 stats.iter.cpu_time_nlp_phase_ii_iter = cpu_time_nlp_iter;
 
+% Dummy Lpec data
 stats.n_lpec_total = 0;
+stats.iter.nodecount_phase_i = 0;
+stats.iter.nodecount_phase_ii= 0;
+stats.iter.baritercount_phase_i = 0;
+stats.iter.baritercount_phase_ii= 0;
+stats.iter.itercount_phase_i = 0;
+stats.iter.itercount_phase_ii= 0;
 
 if sum(cpu_time_nlp_iter)>0
     stats.iter.cpu_time_nlp_iter = cpu_time_nlp_iter;

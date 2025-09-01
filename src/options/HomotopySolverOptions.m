@@ -63,6 +63,8 @@ classdef HomotopySolverOptions < handle
             obj.settings_casadi_nlp.ipopt.warm_start_init_point = 'yes';
             obj.settings_casadi_nlp.ipopt.warm_start_entire_iterate = 'yes';
             obj.settings_casadi_nlp.ipopt.linear_solver = 'ma27'; % 'mumps'; ma57
+            obj.settings_casadi_nlp.detect_simple_bounds = true;
+            obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'relax_bounds';  % make_parameter  make_constraint relax_bounds
             % obj.opts_casadi_nlp.snopt = struct();
             % obj.opts_casadi_nlp.worhp = struct();
             % obj.opts_casadi_nlp.uno = struct();

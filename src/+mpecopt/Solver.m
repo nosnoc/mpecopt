@@ -22,9 +22,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             obj.create_mpec_functions();
             obj.solver_initialization = struct();
             obj.create_lpec_functions();
-
             cpu_time_prepare_mpec = toc(t_prepare_mpec);
-            obj.stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
+                        obj.stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
 
             if strcmp(opts.initialization_strategy,"RelaxAndProject")
                 t_generate_nlp_solvers = tic;
@@ -75,11 +74,22 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             stats.iter.f_iter = []; % objective of accepted steps
             stats.iter.h_std_iter = []; % standard infeasilibty
             stats.iter.h_comp_iter = []; % comp infeasilibty
-            stats.n_nlp_total = 0;
-            stats.n_lpec_total = 0;
             stats.iter.n_nlp_iter = [];
             stats.iter.n_lpec_iter = [];
+
+            % collect details for every lpec solve via a milp
+            % BUG: calling phase II for
+            % feasiblity problems deletes everything): TODO! need a function to empty this for a very new solver call, but need to see how to detect this
+            stats.iter.nodecount_phase_i = [];
+            stats.iter.nodecount_phase_ii= [];
+            stats.iter.baritercount_phase_i = [];
+            stats.iter.baritercount_phase_ii= [];
+            stats.iter.itercount_phase_i = [];
+            stats.iter.itercount_phase_ii= [];
+    
             stats.iter.active_set_changes = [];
+            stats.n_nlp_total = 0;
+            stats.n_lpec_total = 0;
             stats.solver_message  = 'Maximum number of iterations reached.';
             stats.success = false;
             stats.success_phase_i = false;
@@ -167,10 +177,14 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                             end
                             lpec.rho_TR  =  rho_TR_k_l;
                             stats.iter.rho_TR_iter = [stats.iter.rho_TR_iter, rho_TR_k_l]; % store TR radius
-                                                                                           % Solve LPEC
+                            % Solve LPEC
                             [results_lpec,stats_lpec] = lpec_solver(lpec,opts.settings_lpec);
                             stats.iter.cpu_time_lpec_phase_i_iter = [stats.iter.cpu_time_lpec_phase_i_iter, stats_lpec.cpu_time]; % stats
                             stats.n_lpec_total = stats.n_lpec_total+1;
+                            stats.iter.nodecount_phase_i = [stats.iter.nodecount_phase_i, stats_lpec.nodecount];
+                            stats.iter.baritercount_phase_i = [stats.iter.baritercount_phase_i, stats_lpec.baritercount];
+                            stats.iter.itercount_phase_i = [stats.iter.itercount_phase_i, stats_lpec.itercount];
+                            
                             % extract results
                             lpec_solution_exists = stats_lpec.lpec_solution_exists;
                             d_lpec_k_l = results_lpec.d_lpec;
@@ -207,13 +221,13 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                                         f_lin_opt_k_l = 0;
                                     end
                                 end
-                                if norm(d_lpec_k_l) <= opts.tol_B_stationarity
-                                    stats.stopping_criterion_fullfiled = true;     % B-stationary point found, optimal solution found!
-                                    stats.solver_message = 'B-stationary point found sucessfully.';
-                                    stats.success = true;
-                                    stats.b_stationarity = true;
-                                    stats.f_lpec = f_lin_opt_k_l;
-                                end
+                                % if norm(d_lpec_k_l) <= opts.tol_B_stationarity
+                                %     stats.stopping_criterion_fullfiled = true;     % B-stationary point found, optimal solution found!
+                                %     stats.solver_message = 'B-stationary point found sucessfully.';
+                                %     stats.success = true;
+                                %     stats.b_stationarity = true;
+                                %     stats.f_lpec = f_lin_opt_k_l;
+                                % end
                                 stats.iter.X_lpec = [stats.iter.X_lpec, x_trail_lpec];
                                 stats.iter.d_norm_lpec = [stats.iter.d_norm_lpec, norm(d_lpec_k_l)];
                                 stats.iter.f_lpec = [stats.iter.f_lpec, f_lin_opt_k_l]; % store some stats
@@ -275,7 +289,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         if opts.verbose_solver
                             print_iter_stats(1,ii,f_opt_k,h_std_k,h_comp_k,'BNLP',nlp_iters_k,stats_nlp.return_status,rho_TR_k_l,norm(x_k_init(1:dims.n_primal)-x_k),cpu_time_bnlp_ii ,1)
                         end
-                        if full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= opts.tol_feasibility
+                        % if full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= opts.tol_B_stationarity
+                        if ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'}) || full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= opts.tol_B_stationarity   
                             % if ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'})
                             feasible_bnlp_found = true;
                         else
@@ -328,6 +343,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         x_k_init = x_k;
                         stats.n_nlp_total = stats.n_nlp_total+1;
                         x_k = x_k_init(1:dims.n_primal);
+                         if full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= opts.tol_feasibility
+                            % if ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'})
+                            feasible_bnlp_found = true;
+                        else
+                            feasible_bnlp_found = false;
+                        end
                     end
                 end
                 y_lpec_k_l = abs(x_k(dims.ind_x1))>=abs(x_k(dims.ind_x2)); % inital guess for active set/binaries
@@ -548,7 +569,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             end
             stats.rho_TR_final = rho_TR_k_l;
             %  ---- make sure feasible point is declared sucessful ---
-            if full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= opts.tol_feasibility
+            if full(mpec_casadi.h_total_fun(x_k,solver_initialization.p0)) <= opts.tol_B_stationarity*10
                 stats.feasible_bnlp_found = true; stats.success_phase_i = true;
             else
                 stats.feasible_bnlp_found = false; stats.success_phase_i = false;
@@ -608,6 +629,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             solver_initialization.y_lpec_k_l = y_lpec_k_l;
             solver_initialization.d_lpec_k_l = d_lpec_k_l;
             phase_ii = true;
+            opts.settings_lpec.is_in_phase_i = false;
             if opts.verbose_solver
                 print_phase_ii();
                 print_iter_header();
@@ -618,6 +640,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 stats.cpu_time_phase_ii = 1e-10;
             end
 
+            opts.settings_lpec.is_in_phase_i = true; % reset
             %% ------------------------ Final verbose ----------------------------------
             fprintf('\n');
             if opts.verbose_summary
@@ -1426,11 +1449,17 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     lpec.rho_TR = rho_TR_k_l; % update trust region
                     stats.iter.rho_TR_iter = [stats.iter.rho_TR_iter, rho_TR_k_l]; % store TR radius
                                                                                    % Solve LPEC
-                    [results_lpec,stats_lpec] = lpec_solver(lpec,opts.settings_lpec);
+                    [results_lpec,stats_lpec] = lpec_solver(lpec, opts.settings_lpec);
                     if ~phase_ii
                         stats.iter.cpu_time_lpec_phase_i_iter = [stats.iter.cpu_time_lpec_phase_i_iter, stats_lpec.cpu_time]; % stats
+                        stats.iter.nodecount_phase_i = [stats.iter.nodecount_phase_i, stats_lpec.nodecount];
+                        stats.iter.baritercount_phase_i = [stats.iter.baritercount_phase_i, stats_lpec.baritercount];
+                        stats.iter.itercount_phase_i = [stats.iter.itercount_phase_i, stats_lpec.itercount];
                     else
                         stats.iter.cpu_time_lpec_phase_ii_iter = [stats.iter.cpu_time_lpec_phase_ii_iter, stats_lpec.cpu_time]; % stats
+                        stats.iter.nodecount_phase_ii = [stats.iter.nodecount_phase_ii, stats_lpec.nodecount];
+                        stats.iter.baritercount_phase_ii = [stats.iter.baritercount_phase_ii, stats_lpec.baritercount];
+                        stats.iter.itercount_phase_ii = [stats.iter.itercount_phase_ii, stats_lpec.itercount];
                     end
                     n_lpec_k = n_lpec_k + 1; stats.n_lpec_total = stats.n_lpec_total + 1;
                     % extract LPEC results
@@ -1452,8 +1481,14 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                             plot_lpec(nabla_f_k, x_k, d_lpec_k_l, rho_TR_k_l)
                         end
                         % --------------------------- Check if B-stationary point found --------------------------
-                        h_total_k = full(mpec_casadi.h_total_fun(x_k,p0));
-                        if (h_total_k <= opts.tol) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
+                        % h_total_k = full(mpec_casadi.h_total_fun(x_k,p0));
+                        % if ismember(stats_nlp.return_status, {'Solve_Succeeded', 'Search_Direction_Becomes_Too_Small', 'Solved_To_Acceptable_Level'})
+                        %     bnlp_solved = true;
+                        % else
+                        %     bnlp_solved = false;
+                        % end
+                        % if (h_total_k <= opts.tol) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
+                        if ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
                             if opts.reset_lpec_objective
                                 d_lpec_k_l = d_lpec_k_l*0; % if the current point is feasible, and the objective is zero, then d = 0 is also a solution of the lpec (occurs if a solution is not on the verties of the lp)
                                 f_lin_opt_k_l = 0;

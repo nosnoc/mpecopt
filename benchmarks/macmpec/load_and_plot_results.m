@@ -11,7 +11,6 @@ plot_settings.absolute_phase_ii = 0;
 plot_settings.absolute_lpec = 0;
 
 plot_settings.success_fail_statistics = 1;
-
 plot_settings.nlp_lpec_cpu_comparisson = 0;
 
 plot_settings.lpecs_solved = 1;

@@ -43,18 +43,18 @@ classdef MINLPSolverOptions< handle
     methods
         function obj = MINLPSolverOptions()
             % see
-            
-            
+
+
 
             default_tol = 1e-12;
-            % --------- MINLP Specific settings 
+            % --------- MINLP Specific settings
             % bonmin: https://www.coin-or.org/Bonmin/option_pages/options_list_bonmin.html
             obj.settings_casadi_nlp.error_on_fail = false;
             obj.settings_casadi_nlp.bonmin.algorithm = 'B-BB';
             obj.settings_casadi_nlp.bonmin.warm_start = 'interior_point';
             obj.settings_casadi_nlp.bonmin.node_limit = 75;
             obj.settings_casadi_nlp.bonmin.time_limit = 600;
-            
+
             % options for the algorithm
             % B-BB % simple branch-and-bound algorithm,
             % B-OA % OA Decomposition algorithm,
@@ -83,6 +83,9 @@ classdef MINLPSolverOptions< handle
             % obj.settings_casadi_nlp.bonmin.warm_start_init_point = 'yes';
             % obj.settings_casadi_nlp.bonmin.warm_start_entire_iterate = 'yes';
             obj.settings_casadi_nlp.bonmin.linear_solver = 'ma27'; % 'mumps'; ma57
+
+            obj.settings_casadi_nlp.detect_simple_bounds = true;
+            obj.settings_casadi_nlp.bonmin.fixed_variable_treatment  = 'relax_bounds';  % make_parameter  make_constraint relax_bounds
 
             % Some BonminSettings
             % obj.opts_casadi_nlp.snopt = struct();

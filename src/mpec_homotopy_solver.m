@@ -718,7 +718,14 @@ stats.iter.cpu_time_lpec_phase_ii_iter = 0;
 stats.iter.cpu_time_nlp_phase_i_iter = 0;
 stats.iter.cpu_time_nlp_phase_ii_iter = cpu_time_nlp_iter;
 
+% Dummy Lpec data
 stats.n_lpec_total = 0;
+stats.iter.nodecount_phase_i = 0;
+stats.iter.nodecount_phase_ii= 0;
+stats.iter.baritercount_phase_i = 0;
+stats.iter.baritercount_phase_ii= 0;
+stats.iter.itercount_phase_i = 0;
+stats.iter.itercount_phase_ii= 0;
 
 if sum(cpu_time_nlp_iter)>0
     stats.iter.cpu_time_nlp_iter = cpu_time_nlp_iter;

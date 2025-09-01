@@ -5,7 +5,7 @@ import casadi.*
 %% Color order
 
 results_name = ['results/macmpec_general_' datestr(datetime("today"))]; % name for matlab .dat with results
-filename = 'macmpec_general2'; % name for figures and excel table
+filename = 'macmpec_general3'; % name for figures and excel table
 
 %% Load macmpec
 macmpec_json = dir('macMPEC/*.json');
@@ -22,7 +22,8 @@ N_infeasible = [60 66];
 N_almost_feasible = [114 68];
 N_easy = [34 36 65 87 49 67 69 33 51 53 50 55 57 174 25 40 101 16 102 1 2 3 4]; % bunch of easy problems for more diversity
 % N_interesting = [N_failed_by_scohltes, N_biactive, N_non_S, N_qpecs, N_not_presolve, N_easy, N_infeasible, N_almost_feasible];
-N_interesting = N_easy;
+N_interesting = [N_non_S, N_qpecs, N_not_presolve, N_not_B_scholtes];
+N_interesting  = unique(N_interesting);
 % N_interesting = [N_easy, N_failed_by_scohltes, N_biactive];
 
 % for ii = N_interesting
@@ -43,20 +44,26 @@ for ii=1:length(macmpec_json)
     mpecs = [mpecs,mpec];
 end
 
-% N_interesting = [];
-% for ii=1:length(macmpec_json)
-%     if mpecs(ii).n_w <= 50
-%         N_interesting = [N_interesting; ii];
-%     end
-% end
+N_interesting = [];
+for ii=1:length(macmpec_json)
+    if mpecs(ii).n_w <= 250
+        N_interesting = [N_interesting; ii];
+    end
+end
 
-% mpecs = mpecs(N_interesting);
+mpecs = mpecs(N_interesting);
 
 
 %% Define list of solvers to use
 solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS", "MPECopt-$\ell_1$-Gurobi", ...
                   "Reg" , "NLP", ...
                   "MINLP"];
+
+
+solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-Early", "MPECopt-$\ell_1$-Gurobi", ...
+                  "Reg" , "NLP", ...
+                  "MINLP"];
+
 
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
                     @mpec_homotopy_solver,@mpec_homotopy_solver,...
@@ -66,12 +73,22 @@ default_opts1 = mpecopt.Options();
 default_opts1.solver_name = solver_names{1};
 default_opts1.settings_lpec.lpec_solver = "Gurobi";
 default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";
+% default_opts1.initialization_strategy = "FeasibilityEll1General";
+
+% default_opts2 = mpecopt.Options();
+% default_opts2.solver_name = solver_names{2};
+% default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
+% default_opts2.settings_lpec.stop_lpec_at_feasible = true;
+% default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
+% default_opts2.rho_TR_phase_i_init = 1e-3;
 
 default_opts2 = mpecopt.Options();
 default_opts2.solver_name = solver_names{2};
-default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
+default_opts2.settings_lpec.lpec_solver = "Gurobi";
 default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
-default_opts2.rho_TR_phase_i_init = 1e-3;
+default_opts2.settings_lpec.stop_lpec_at_feasible = true;
+% default_opts2.rho_TR_phase_i_init = 1e-3;
+
 
 default_opts3 = mpecopt.Options();
 default_opts3.solver_name = solver_names{3};
@@ -97,6 +114,7 @@ opts = {default_opts1, default_opts2, default_opts3, ...
 
 %% Create data struct
 N_experiments = [1, 3:6];
+N_experiments = [2];
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 
 %%  Pick which results to plot
@@ -130,7 +148,7 @@ end
 %% Plot results  
 plot_settings.success_fail_statistics = 1;
 plot_settings.n_biactive = 0;
-plot_settings.lpecs_solved = 0;
+plot_settings.lpecs_solved = 1;
 plot_settings.active_set_changes = 0;
 plot_settings.lpecs_cpu_time = 0;
 plot_settings.bar_timing_plots = 0;
