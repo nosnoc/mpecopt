@@ -1936,6 +1936,9 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     lbg_comp_relaxed = -inf*ones(dims.n_comp,1);
                     ubg_comp_relaxed = 0*ones(dims.n_comp,1);
                 end
+                case "Ell_1"
+                    lbg_comp_relaxed = [];
+                    ubg_comp_relaxed = [];
             end
 
             lbg_relaxed = [lbg_relaxed;lbg_comp_relaxed]; 
