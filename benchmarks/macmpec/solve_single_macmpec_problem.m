@@ -6,7 +6,7 @@ macmpec_json = dir('macMPEC/*.json');
 
 all_problem_names = {macmpec_json.name};
 
-problame_name = 'qpec-200-2';  
+problame_name = 'qpec-200-3';  
 % problame_name =  'ralph1';
 % problame_name =  'pack-rig-32';
 % problame_name =  'pack-rig-8';
@@ -20,6 +20,8 @@ problame_name = 'qpec-200-2';
 
 % problame_name = 'pack-rig2p-8';
 
+ % problame_name = 'pack-rig1p-32'; % lot of lpec itters
+
 
 % Infesaile : gnash15m gnash16m gnash17m gnash18m gnash19m 
 % Cyicling: tap-09?
@@ -30,8 +32,8 @@ N_biactive = [168 80 83 71 85 73 120 117 105 108];
 
 ii_prob = find(contains({macmpec_json.name},problame_name));
 % ii_prob = N_biactive(10); % A stationarity in reg! looks problematic!
-% ii_prob = N_biactive(9);
-% ii_prob = 8;
+ii_prob = N_biactive(9);
+% ii_prob = 183;
 
 
 fname = fullfile(macmpec_json(ii_prob).folder, macmpec_json(ii_prob).name);
@@ -46,6 +48,7 @@ mpec.f_fun = Function.deserialize(mpec.f_fun);
 mpec.g_fun = Function.deserialize(mpec.g_fun);
 mpec.G_fun = Function.deserialize(mpec.G_fun);
 mpec.H_fun = Function.deserialize(mpec.H_fun);
+name = mpec.name
 
 %% create casadi problem
 w = mpec.w;
@@ -107,7 +110,7 @@ settings_minlp.settings_casadi_nlp.bonmin.max_consecutive_failures = 5;
 %% MPECopt solver
 solver_settings = mpecopt.Options();
 solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
-solver_settings.settings_lpec.lpec_solver = "Gurobi";
+solver_settings.settings_lpec.lpec_solver = "Highs";
 solver_settings.settings_casadi_nlp.ipopt.max_iter = 4000;
 solver_settings.settings_lpec.stop_lpec_at_feasible = true;
 % solver_settings.settings_casadi_nlp.ipopt.fixed_variable_treatment = 'relax_bounds';
@@ -121,6 +124,9 @@ solver = mpecopt.Solver(mpec, solver_settings);
 w_opt_mpecopt = full(result_mpecopt.x);
 f_opt_mpecopt = full(result_mpecopt.f);
 
+stats_mpecopt.iter.nodecount_phase_i
+stats_mpecopt.iter.nodecount_phase_ii
+
 %% Results comparison
 fprintf('\n-------------------------------------------------------------------------------\n');
 fprintf('Method \t\t Objective \t comp_res \t n_biactive \t CPU time (s)\t Success\t Stat. type\n')
@@ -132,8 +138,7 @@ fprintf('-----------------------------------------------------------------------
 fprintf('||w_reg - w_mpec|| = %2.2e \n',norm(w_opt_homotopy-w_opt_mpecopt));
 % fprintf('||w_minlp - w_mpec|| = %2.2e \n',norm(w_opt_minlp-w_opt_mpecopt));
 
-% stats_mpecopt.iter.nodecount_phase_i
-% stats_mpecopt.iter.nodecount_phase_ii
+
 % 
 % stats_mpecopt.iter.itercount_phase_i
 % stats_mpecopt.iter.itercount_phase_ii

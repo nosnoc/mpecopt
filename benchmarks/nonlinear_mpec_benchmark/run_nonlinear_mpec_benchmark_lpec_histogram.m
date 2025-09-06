@@ -1,14 +1,15 @@
 clear; clc; close all;
 problem_set_name = 'nonlinear_mpec2'; % (add large, degenerate, nonlinear, include lifted)
 
+
 %% file names
-filename = 'nonlinear_mpec_general2'; % name for figures and excel table
+filename = 'random_lpecs'; % name for figures and excel table
 results_name = ['results/' filename '_' datestr(datetime("today"))]; % name for matlab .dat with results
 %% Generate test set
 settings.nonlinear_eq_constraints = 1;
 settings.nonlinear_ineq_constraints = 1;
 settings.s_nonlinear_eq = 0.05;
-settings.s_nonlinear_ineq = 0.33;
+settings.s_nonlinear_ineq = 1/3;
 settings.include_lifted_variables_in_objective = 0;
 settings.copy_ineq = 1;  %have two copies of the inequality constrants -> violate licq if active
 settings.s_ineq_copy = 0.25;
@@ -28,9 +29,7 @@ settings.objective_functions = {'Quadratic_psd','Quadratic_ind',...
     'Fletcvb3','Bdqrtic','Tridia',...
     'EG2','Edensch','Indef',...
     'Cube','Bdexp','Genhumps',...
-    'Arwhead', 'Quartc', 'Cosine', 'Sine',...
-    'LUKVLE10', 'CURLY20', 'SCURLY30', 'FLETBV3M'
-    };
+    'Arwhead', 'Quartc', 'Cosine', 'Sine'};
 
 
 settings.objective_functions = {'Quadratic_psd',... 
@@ -44,11 +43,6 @@ settings.objective_functions = {'Quadratic_psd',...
     'EG2','Edensch','Indef',...
     'Cube','Bdexp','Genhumps',...
     'Arwhead', 'Quartc', 'Cosine'};
-
-
-settings.objective_functions = {'Quadratic_psd',... 
-    'Fletcher','Himmelblau','McCormick'};
-
 
 
 settings.rescale_factor = 1;
@@ -70,14 +64,14 @@ settings.variable_density = 1;
 settings.range_s_density = [0.1 0.3];
 settings.random_problem_sizes = 1;
 
-settings.n_ineq_ub = 2; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
+settings.n_ineq_ub = 3; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
 settings.n_ineq_lb = 0.1;
 
 % Problem size 
 
 dimensions.N_rand_prob = 4; % number of problems per objective
-dimensions.n_x_max = 100;
-dimensions.n_x_min = 10;
+dimensions.n_x_max = 400;
+dimensions.n_x_min = 100;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 
@@ -91,63 +85,42 @@ length(mpecs)
 
 
 %% Solver settings
+%% Define list of solvers to use
+solver_names  = ["Gurobi", "Gurobi-early", "Highs", "Highs-early"];
 
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS", "MPECopt-$\ell_1$-Gurobi", ...
-                  "Reg" , "NLP", ...
-                  "MINLP"];
+solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,@mpec_optimizer};
 
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-Early", "MPECopt-$\ell_1$-Gurobi", ...
-                  "Reg" , "NLP", ...
-                  "MINLP"];
-
-solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
-                    @mpec_homotopy_solver,@mpec_homotopy_solver,...
-                    @mpec_minlp_solver};
-default_opts1 = mpecopt.Options();
-default_opts1.solver_name = solver_names{1};
-default_opts1.settings_lpec.lpec_solver = "Highs_casadi";
-default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";
-% default_opts1.initialization_strategy = "FeasibilityEll1General";
-
-% default_opts2 = mpecopt.Options();
-% default_opts2.solver_name = solver_names{2};
-% default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
-% default_opts2.settings_lpec.stop_lpec_at_feasible = true;
-% default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
-% default_opts2.rho_TR_phase_i_init = 1e-3;
-
-default_opts2 = mpecopt.Options();
-default_opts2.solver_name = solver_names{2};
-default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
-default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
-default_opts2.settings_lpec.stop_lpec_at_feasible = true;
-% default_opts2.rho_TR_phase_i_init = 1e-3;
+opts1 = mpecopt.Options();
+opts1.solver_name = solver_names{1};
+opts1.settings_lpec.lpec_solver = "Gurobi";
+opts1.relax_and_project_homotopy_parameter_steering = "Direct";
+opts1.settings_lpec.stop_lpec_at_feasible = false;
 
 
-default_opts3 = mpecopt.Options();
-default_opts3.solver_name = solver_names{3};
-default_opts3.settings_lpec.lpec_solver = "Gurobi";
-default_opts3.relax_and_project_homotopy_parameter_steering = "Ell_1";
+opts2 = mpecopt.Options();
+opts2.solver_name = solver_names{2};
+opts2.settings_lpec.lpec_solver = "Gurobi";
+opts2.relax_and_project_homotopy_parameter_steering = "Direct";
+opts2.settings_lpec.stop_lpec_at_feasible = true;
 
 
-scholtes_opts1 = HomotopySolverOptions();
-scholtes_opts1.homotopy_parameter_steering = 'Direct';
+opts3 = mpecopt.Options();
+opts3.solver_name = solver_names{3};
+opts3.settings_lpec.lpec_solver = "Highs";
+opts3.relax_and_project_homotopy_parameter_steering = "Direct";
+opts3.settings_lpec.stop_lpec_at_feasible = false;
 
-scholtes_opts2 = HomotopySolverOptions();
-scholtes_opts2.homotopy_parameter_steering = 'Direct';
-scholtes_opts2.max_iter = 1;
-scholtes_opts2.settings_casadi_nlp.ipopt.bound_relax_factor = 1e-12;
-scholtes_opts2.sigma0 = 0;
 
-minlp_opts = MINLPSolverOptions();
-scholtes_opts3.homotopy_parameter_steering = 'Ell_1';
+opts4 = mpecopt.Options();
+opts4.solver_name = solver_names{4};
+opts4.settings_lpec.lpec_solver = "Highs";
+opts4.relax_and_project_homotopy_parameter_steering = "Direct";
+opts4.settings_lpec.stop_lpec_at_feasible = true;
 
-opts = {default_opts1, default_opts2, default_opts3, ...
-       scholtes_opts1, scholtes_opts2,...
-       minlp_opts}; % list of options to pass to mpecsol (option structs)
+opts = {opts1, opts2, opts3, opts4}; % list of options to pass to mpecsol (option structs)
 
 %% Create data struct
-N_experiments = [1 2];
+N_experiments = [1 2 3 4];
 
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot

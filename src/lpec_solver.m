@@ -1,45 +1,38 @@
 function  [results,stats] = lpec_solver(lpec,settings)
-% This functions solves Linear Programs with Complementarity Constraints
-% (LPECs) that arise as subproblems of the MPEC_Opt method, and they have
-% the form:
-% min_d  f'*d
-% s.t.    A_eq*d+b_eq = 0
-%         A_ineq*d+b_ineq >= 0
-%         lb  <= d  + x_lin <= ub
-%         0<= d_1 + x_lin_1 _|_ d_2 + x_lin_2 >= 0
-%         -rho_TR <= d <= rho_TR;
-% The problems are solved either a Big M reformulation and mixed-integer
-% linear programing solvers: Gurobi, Highs or Matlab, or via the Scholtes
-% relaxation, Ell_1 or Ell_infity penalty reformulations and Ipopt - within
-% a homotopy loop.
-
-% Inputs: dims (contains important dimenisons, and index vectors of
-% d0_,d_1 and d_2
-% BigM
-% lpec.x_lin = x_lin; % linearization point
-% lpec.dims  = dims; %
-% lpec.d_lpec = w0; % initial guess for cont. variables
-% lpec.y_lpec = w0(ind_x1)>w0(ind_x2); % inital guess for bin. variablels.
-% lpec.rho_TR = rho_TR;
-% lpec.lb = lbw;
-% lpec.ub = ubw;
-% lpec.lb_binary = []; % relevant if the lpec is reduced
-% lpec.ub_binary = [];
-% lpec.f = f; % cost gradient
-% lpec.A_eq = A_eq;
-% lpec.b_eq = b_eq;
-% lpec.A_ineq = A_ineq;
-% lpec.b_ineq = b_ineq;
-% lpec.A_lpec = A_lpec; % constraint matrices for the binary constraint to model complementarities
-% lpec.b_lpec = b_lpec;
-% lpec.sense = sense;
-% lpec.vtype = vtype;
-% lpec.vtype_num = vtype_num;
+%LPEC_SOLVER Solves Linear Programs with Complementarity Constraints
+%
+%   [RESULTS, STATS] = LPEC_SOLVER(LPEC, SETTINGS) solves LPECs of the form:
+%       min_d   f' * d
+%       s.t.    A_eq * d + b_eq = 0
+%               A_ineq * d + b_ineq >= 0  
+%               lb <= d + x_lin <= ub
+%               0 <= d_1 + x_lin_1 ⊥ d_2 + x_lin_2 >= 0
+%               -rho_TR <= d <= rho_TR
+%
+%   METHODS: Big-M with MILP solvers (Gurobi, HiGHS, MATLAB) or continuous 
+%   reformulations (Scholtes, L1/L∞ penalty) with Ipopt via homotopy.
+%
+%   INPUTS:
+%   lpec - Structure with fields:
+%       .x_lin, .d_lpec, .y_lpec  - Linearization point and initial guesses
+%       .rho_TR, .lb, .ub         - Trust region radius and bounds  
+%       .f, .A_eq, .b_eq          - Objective and equality constraints
+%       .A_ineq, .b_ineq          - Inequality constraints
+%       .A_lpec, .b_lpec          - Complementarity constraint data
+%       .dims, .sense, .vtype     - Problem dimensions and variable types
+%   
+%   settings - Solver options structure
+%
+%   OUTPUTS:
+%   results - Solution: .d_lpec (cont. variables), y_lpec (binaries encoding active set), .f_opt (lpec objective)
+%   stats   - Statistics: .solve_time, .iterations, .nodecount, .itercount, .gap
+%%
 import casadi.*
 %% init some stats:
 stats.itercount = 0; % number simplex iters
 stats.baritercount = 0; % nuber of barrier iters
 stats.nodecount = 0; % number of nodes in BnB
+stats.gap = inf; % integer gap
 
 %% Prepare LPEC
 % add the boundso of the inaries
@@ -194,8 +187,6 @@ switch settings.lpec_solver
         % highs_opts.highs.primal_feasibility_tolerance = 1e-9;
         % highs_opts.highs.dual_feasibility_tolerance = 1e-9;        
         highs_opts.highs.mip_heuristic_effort = 0.1;
-        
-
 
         % highs_opts.highs.simplex_strategy = 4;
         % highs_opts.error_on_fail = false;
@@ -266,6 +257,7 @@ switch settings.lpec_solver
             stats.itercount = result_gurobi.itercount;
             stats.baritercount = result_gurobi.baritercount;
             stats.nodecount = result_gurobi.nodecount;
+            stats.gap = result_gurobi.mipgap;
             cpu_time_gurobi = toc(gurobi_time);
             % todo; add node and itter coumt, and add them tho phase i iter
             % and node, 
@@ -280,6 +272,8 @@ switch settings.lpec_solver
             % stats.lpec_solution_exists = false;
             result_gurobi.nodecount = nan;
             result_gurobi.runtime = nan;
+            result_gurobi.mipgap = nan;
+
             cpu_time_gurobi = nan;
         end
 
@@ -317,6 +311,7 @@ switch settings.lpec_solver
                 results.f_opt = f_opt;
                 stats.lpec_solution_exists = true;
                 stats.nodecount = output.numnodes;
+                stats.gap = output.relativegap;
                 stats.solver_message  = 'OPTIMAL';
                 if status == 2
                     stats.solver_message  = 'NODE_LIMIT';                  % node limit but solution exists
@@ -329,6 +324,7 @@ switch settings.lpec_solver
                 results.f_opt = nan;
                 stats.lpec_solution_exists = false;
                 stats.nodecount = output.numnodes;
+                stats.gap = nan;
                 if status == 0
                     stats.solver_message  = 'NODE_LIMIT';
                 else
@@ -348,11 +344,10 @@ switch settings.lpec_solver
         end
         cpu_time = toc(higs_casadi_time);
 
-
         if highs_success
             x = full(r.x);
-            results.d_lpec = x(1:lpec.dims.n_primal);
-            results.y_lpec = x(end-lpec.dims.n_auxiliary+1:end);
+            results.d_lpec = x(lpec.vtype_num==0);
+            results.y_lpec = round(x(lpec.vtype_num==1));
             results.f_opt = full(r.cost);
             stats.lpec_solution_exists = true;
 
@@ -361,14 +356,15 @@ switch settings.lpec_solver
             results.d_lpec = lpec.d_lpec*nan;
             results.y_lpec = lpec.y_lpec*nan;
             results.f_opt = nan;
-
             stats.lpec_solution_exists = false;
         end
         stats.nodecount = lpsol.stats.n_call_solver;
-        stats.itercount = lpsol.stats.iter_count;
+        stats.itercount = lpsol.stats.simplex_iteration_count;
         stats.baritercount = lpsol.stats.ipm_iteration_count;
+        stats.gap = lpsol.stats.mip_gap;
         % stats.cpu_time =  lpsol.stats.t_wall_solver;
         stats.cpu_time  = cpu_time;
+        
 
         stats.solver_message =  lpsol.stats.unified_return_status;
     case {'Reg','Ell_1','Ell_inf','Nlp'}

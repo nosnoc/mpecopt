@@ -23,7 +23,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             obj.solver_initialization = struct();
             obj.create_lpec_functions();
             cpu_time_prepare_mpec = toc(t_prepare_mpec);
-                        obj.stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
+            obj.stats.cpu_time_prepare_mpec = cpu_time_prepare_mpec;
 
             if strcmp(opts.initialization_strategy,"RelaxAndProject")
                 t_generate_nlp_solvers = tic;
@@ -80,6 +80,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             % collect details for every lpec solve via a milp
             % BUG: calling phase II for
             % feasiblity problems deletes everything): TODO! need a function to empty this for a very new solver call, but need to see how to detect this
+            stats.iter.gap_phase_i = [];
+            stats.iter.gap_phase_ii = [];
             stats.iter.nodecount_phase_i = [];
             stats.iter.nodecount_phase_ii= [];
             stats.iter.baritercount_phase_i = [];
@@ -113,12 +115,12 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 x_k_init = solver_initialization_relaxed.x0;
             end
 
-            stats.iter.cpu_time_nlp_phase_i_iter = [0];
-            stats.iter.cpu_time_nlp_phase_ii_iter = [0];
-            stats.iter.cpu_time_lpec_phase_i_iter = [0];
-            stats.iter.cpu_time_lpec_phase_ii_iter = [0];
+            stats.iter.cpu_time_nlp_phase_i_iter = [];
+            stats.iter.cpu_time_nlp_phase_ii_iter = [];
+            stats.iter.cpu_time_lpec_phase_i_iter = [];
+            stats.iter.cpu_time_lpec_phase_ii_iter = [];
             stats.iter.cpu_time_lpec_preparation_iter = [];
-            stats.iter.cpu_time_nlp_iter = [0];
+            stats.iter.cpu_time_nlp_iter = [];
             stats.iter.cpu_time_globalization_iter = [];
 
             %%  ---------------------- Phase I - compute feasible point ------------------------
@@ -179,9 +181,10 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                             stats.iter.rho_TR_iter = [stats.iter.rho_TR_iter, rho_TR_k_l]; % store TR radius
                             % Solve LPEC
                             [results_lpec,stats_lpec] = lpec_solver(lpec,opts.settings_lpec);
-                            stats.iter.cpu_time_lpec_phase_i_iter = [stats.iter.cpu_time_lpec_phase_i_iter, stats_lpec.cpu_time]; % stats
                             stats.n_lpec_total = stats.n_lpec_total+1;
+                            stats.iter.cpu_time_lpec_phase_i_iter = [stats.iter.cpu_time_lpec_phase_i_iter, stats_lpec.cpu_time]; 
                             stats.iter.nodecount_phase_i = [stats.iter.nodecount_phase_i, stats_lpec.nodecount];
+                            stats.iter.gap_phase_i = [stats.iter.gap_phase_i , stats_lpec.gap];
                             stats.iter.baritercount_phase_i = [stats.iter.baritercount_phase_i, stats_lpec.baritercount];
                             stats.iter.itercount_phase_i = [stats.iter.itercount_phase_i, stats_lpec.itercount];
                             
@@ -1453,11 +1456,13 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     if ~phase_ii
                         stats.iter.cpu_time_lpec_phase_i_iter = [stats.iter.cpu_time_lpec_phase_i_iter, stats_lpec.cpu_time]; % stats
                         stats.iter.nodecount_phase_i = [stats.iter.nodecount_phase_i, stats_lpec.nodecount];
+                        stats.iter.gap_phase_i = [stats.iter.gap_phase_i, stats_lpec.gap];
                         stats.iter.baritercount_phase_i = [stats.iter.baritercount_phase_i, stats_lpec.baritercount];
                         stats.iter.itercount_phase_i = [stats.iter.itercount_phase_i, stats_lpec.itercount];
                     else
                         stats.iter.cpu_time_lpec_phase_ii_iter = [stats.iter.cpu_time_lpec_phase_ii_iter, stats_lpec.cpu_time]; % stats
                         stats.iter.nodecount_phase_ii = [stats.iter.nodecount_phase_ii, stats_lpec.nodecount];
+                        stats.iter.gap_phase_ii = [stats.iter.gap_phase_ii, stats_lpec.gap];
                         stats.iter.baritercount_phase_ii = [stats.iter.baritercount_phase_ii, stats_lpec.baritercount];
                         stats.iter.itercount_phase_ii = [stats.iter.itercount_phase_ii, stats_lpec.itercount];
                     end

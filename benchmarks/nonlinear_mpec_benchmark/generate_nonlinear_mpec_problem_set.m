@@ -268,7 +268,6 @@ for kk = 1:length(objective_functions)
                     for i = 1:floor(n_obj/2)
                         f = f+(w(2*i-1)^2+w(2*i)^2+w(2*i-1)*w(2*i))^2+sin(w(2*i-1))^2+cos(w(2*i))^2;
                     end
-
                 case 'Fletcvb3'
                     p = 1/1e8;
                     c = 1;
@@ -332,6 +331,53 @@ for kk = 1:length(objective_functions)
                     for i = n_obj-1
                         f = f + sin(-0.5*w(i+1)+w(i)^2);
                     end
+
+                % last four are from the cutest https://ccom.ucsd.edu/~optimizers/cutest/problems/
+                case 'LUKVLE10'
+                    f = 0;
+                    for i = 1:(n_obj/2)
+                        xi = w(2*i-1);
+                        yi = w(2*i);
+                        f = f + (xi^2)^(yi^2 + 1) + (yi^2)^(xi^2 + 1);
+                    end
+                case 'CURLY20'
+                    K = 20;
+                    f = 0;
+                    for i = 1:n_obj
+                        if i <= n_obj-K
+                            q = sum(w(i:(i+K)));
+                        else
+                            q = sum(w(i:n_obj));
+                        end
+                        f = f + q * (q * (q^2 - 20) - 0.1);
+                    end
+                case 'SCURLY30'
+                    K = 30;
+                    SCAL = 12.0;
+                    f = 0;
+                    % scale factors as column vector
+                    S = exp(((0:(n_obj-1))/(n_obj-1)) * SCAL)';
+                    for i = 1:n_obj
+                        if i <= n_obj-K
+                            q = sum(S(i:(i+K)) .* w(i:(i+K)));
+                        else
+                            q = sum(S(i:end) .* w(i:end));
+                        end
+                        f = f + q * (q * (q^2 - 20) - 0.1);
+                    end
+                case 'FLETBV3M'
+                    f = 0;
+                    for i = 1:n_obj
+                        % finite-difference like group (difference with next)
+                        if i < n_obj
+                            q = w(i+1) - w(i);
+                        else
+                            q = w(i);
+                        end
+                        % element contribution (scaled sin/cos)
+                        f = f + 0.5 * q^2 + 100*sin(0.01*w(i)) + 1e8*cos(w(i));
+                    end
+
  
                     % case 'Hager'
                     %very similar to  Raydan 2
