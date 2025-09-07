@@ -17,7 +17,8 @@ ind_I_00 = find(active_set_estimate_k.I_00);
 
 eta_x1_biactive = eta_x1(ind_I_00);
 eta_x2_biactive = eta_x2(ind_I_00);
-max_mult = max(norm([eta_x1_biactive;eta_x2_biactive],inf), 1e-10);
+max_mult = max(norm([eta_x1_biactive;eta_x2_biactive],inf), 1e-12);
+% max_mult = 1;
 
 % Rescale to max (sensitive for M-stationarity)
 eta_x1_biactive = eta_x1_biactive./max_mult; 

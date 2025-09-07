@@ -24,7 +24,8 @@ classdef Options < handle
         stop_if_S_stationary (1,1) logical = false; % S stationarity is sufficent for B
 
         % --- BNLP/TNLP settings----
-        piece_nlp_strategy PieceNLPStartegy = "BNLP_integer";
+        piece_nlp_strategy PieceNLPStartegy = "BNLP_integer"
+        use_one_nlp_solver (1,1) logical = true; % if true create only one NLP solver for phase i with reg, and phase ii for bnlp and tnlp check (but set sigma to inf) - saves lot of time for large problems; Option supportedo only for RelaxAndProject Phase I
 
         % Multiplier-based stationarity
         compute_tnlp_stationary_point (1,1) logical = true; % todo: reduce this and the one below settings to one
@@ -119,7 +120,8 @@ classdef Options < handle
             % obj.settings_lpec.solver_name = 'lpec_solver';
             % obj.settings_lpec.lpec_solver= LpecSolver.Gurobi;
             % obj.settings_lpec.max_nodes = 2e3;
-            obj.settings_lpec.stop_lpec_at_feasible = false;
+            obj.settings_lpec.stop_lpec_at_feasible = false; % Stop at a feasible point in Phase I lpecs (sufficent for pogress)
+            obj.settings_lpec.stop_lpec_at_descent = false; % Stop at descent direction in Phase II lepcs (sufficent for pogress) (supported only for gurobi atm)
             obj.settings_lpec.trust_region_on_slacks = false; % trust region for slack variables in fesability problem;
             % obj.settings_lpec.rel_tol= 1e-6;
             % obj.settings_lpec.abs_tol= 1e-8;

@@ -24,7 +24,11 @@ else
 end
 
 %% homotopy parameters
-sigma = SX.sym('sigma',1);
+if strcmp(class(x),'casadi.SX')
+    sigma = SX.sym('sigma',1);
+else
+    sigma = MX.sym('sigma',1);
+end
 ii = 1;
 comp_res_ii = 1e3;
 p = [p;sigma];
@@ -55,7 +59,11 @@ ind_x2 = [];
 % Lift complemetraties G
 if settings.lift_complementarities_full
     % full lifting with duplicatse;
-    x1 = SX.sym('x1',n_comp);
+    if strcmp(class(x),'casadi.SX')
+        x1 = SX.sym('x1',n_comp);
+    else
+        x1 = MX.sym('x1',n_comp);
+    end
     lbx = [lbx;0*ones(n_comp,1)];
     ubx = [ubx;inf*ones(n_comp,1)];
     x = [x;x1];
@@ -80,7 +88,11 @@ elseif settings.lift_complementarities
         end
     end
     if n_lift_x1 > 0
-        x1_lift = SX.sym('x1_lift',n_lift_x1);
+        if strcmp(class(x),'casadi.SX')
+            x1_lift = SX.sym('x1_lift',n_lift_x1);
+        else
+            x1_lift = MX.sym('x1_lift',n_lift_x1);
+        end
         lbx = [lbx;0*ones(n_lift_x1,1)];
         ubx = [ubx;inf*ones(n_lift_x1 ,1)];
         x = [x;x1_lift];
@@ -110,7 +122,11 @@ end
 % Lift complemetraties H
 if settings.lift_complementarities_full
     % full lifting with duplicatse;
-    x2 = SX.sym('x2',n_comp);
+    if strcmp(class(x),'casadi.SX')
+        x2 = SX.sym('x2',n_comp);
+    else
+        x2 = MX.sym('x2',n_comp);
+    end
     lbx = [lbx;0*ones(n_comp,1)];
     ubx = [ubx;inf*ones(n_comp,1)];
     x = [x;x2];
@@ -136,7 +152,11 @@ elseif settings.lift_complementarities
         end
     end
     if n_lift_x2 > 0
-        x2_lift = SX.sym('x2_lift',n_lift_x2);
+        if strcmp(class(x),'casadi.SX')
+            x2_lift = SX.sym('x2_lift',n_lift_x2);
+        else
+            x2_lift = MX.sym('x2_lift',n_lift_x2);
+        end
         lbx = [lbx;0*ones(n_lift_x2,1)];
         ubx = [ubx;inf*ones(n_lift_x2 ,1)];
         x = [x;x2_lift];
@@ -290,9 +310,13 @@ if settings.check_B_stationarity
     dims.ind_x1 = ind_x1;
     dims.ind_x2 = ind_x2;
     dims.n_slacks = 0;
-
-    M = SX.sym('M', 1);
-    y = SX.sym('y', dims.n_comp); % binary variablkes for comp. constraints
+    if strcmp(class(x),'casadi.SX')
+        M = SX.sym('M', 1);
+        y = SX.sym('y', dims.n_comp); % binary variablkes for comp. constraints
+    else
+        M = MX.sym('M', 1);
+        y = MX.sym('y', dims.n_comp); % binary variablkes for comp. constraints
+    end
     % Big M reformulation of complementarities
     A_lpec_sym = [-x1+M*y; -x2-M*y];
     A_lpec = A_lpec_sym.jacobian([x;y]);
@@ -356,7 +380,11 @@ switch settings.homotopy_parameter_steering
         ubg_comp = [];
         f = f+(x1'*x2)*(sigma)^(-1);
     case 'Ell_inf'
-        s_eleastic = SX.sym('s_eleastic',1);
+        if strcmp(class(x),'casadi.SX')
+            s_eleastic = SX.sym('s_eleastic',1);
+        else
+            s_eleastic = MX.sym('s_eleastic',1);
+        end
         f = f+(s_eleastic)*(sigma)^(-1);
         x = [x;s_eleastic];
         lbx = [lbx;0];
