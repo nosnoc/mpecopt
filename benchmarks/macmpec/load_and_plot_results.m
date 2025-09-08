@@ -52,7 +52,7 @@ switch results
     case 1
         % S = load('macmpec_general_30-Oct-2024');      
         % S = load('macmpec_general_07-Nov-2024');
-        S = load('macmpec_general_31-Aug-2025');
+        S = load('macmpec_general_06-Sep-2025');
         dtable = S.dtable;
         % solver_names  = ["MPECopt-Gurobi", "MPECopt-HiGHS",...
         %     "MPECopt-Simple", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];

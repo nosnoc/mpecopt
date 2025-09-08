@@ -15,6 +15,7 @@ problame_name = 'qpec-200-3';
 % problame_name =  'nash1a'; 
 % problame_name =  'nash1c'; 
 % problame_name =  'tap-09'; 
+problame_name = ' design-cent-31';
 
 % problame_name = 'pack-rig2p-16';
 
@@ -32,8 +33,8 @@ N_biactive = [168 80 83 71 85 73 120 117 105 108];
 
 ii_prob = find(contains({macmpec_json.name},problame_name));
 % ii_prob = N_biactive(10); % A stationarity in reg! looks problematic!
-ii_prob = N_biactive(9);
-% ii_prob = 183;
+% ii_prob = N_biactive(10);
+% ii_prob = 17;
 
 
 fname = fullfile(macmpec_json(ii_prob).folder, macmpec_json(ii_prob).name);
@@ -103,21 +104,24 @@ settings_minlp.settings_casadi_nlp.bonmin.time_limit = 25;
 settings_minlp.settings_casadi_nlp.bonmin.node_limit = 5;
 settings_minlp.settings_casadi_nlp.bonmin.solution_limit = 5;
 settings_minlp.settings_casadi_nlp.bonmin.max_consecutive_failures = 5;
-% [result_minlp,stats_minlp] = mpec_minlp_solver(mpec,solver_initalization,settings_minlp);
+[result_minlp,stats_minlp] = mpec_minlp_solver(mpec,solver_initalization,settings_minlp);
 % f_opt_minlp = full(result_minlp.f);
 % w_opt_minlp = full(result_minlp.x);
 
 %% MPECopt solver
 solver_settings = mpecopt.Options();
 solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
-solver_settings.settings_lpec.lpec_solver = "Highs";
-solver_settings.settings_casadi_nlp.ipopt.max_iter = 4000;
+solver_settings.settings_lpec.lpec_solver = "Gurobi";
+% solver_settings.settings_casadi_nlp.ipopt.max_iter = 4000;
 solver_settings.settings_lpec.stop_lpec_at_feasible = true;
 % solver_settings.settings_casadi_nlp.ipopt.fixed_variable_treatment = 'relax_bounds';
 % solver_settings.initialization_strategy = "FeasibilityEll1General";
 % solver_settings.rho_TR_phase_i_init = 10;
 % solver_settings.tol_active = 1e-6;
+solver_settings.use_one_nlp_solver = true;
+tic
 solver = mpecopt.Solver(mpec, solver_settings);
+toc
 [result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);
 
 % [solution,stats] = mpec_optimizer(mpec, solver_initalization, solver_settings);
@@ -126,6 +130,8 @@ f_opt_mpecopt = full(result_mpecopt.f);
 
 stats_mpecopt.iter.nodecount_phase_i
 stats_mpecopt.iter.nodecount_phase_ii
+stats_mpecopt.iter.cpu_time_lpec_phase_i_iter
+stats_mpecopt.iter.cpu_time_lpec_phase_ii_iter
 
 %% Results comparison
 fprintf('\n-------------------------------------------------------------------------------\n');

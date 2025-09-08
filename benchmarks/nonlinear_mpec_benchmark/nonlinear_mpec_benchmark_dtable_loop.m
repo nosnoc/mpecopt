@@ -44,7 +44,6 @@ lpec_dstruct.cpu_time_lpec_phase_i = {};
 lpec_dstruct.cpu_time_lpec_phase_ii = {};
 
 
-
 % dstruct.solver_message = [;]
 dstruct.prob_num = [];
 dstruct.f = [];
@@ -60,6 +59,10 @@ for ii = N_experiments
     options = opts{ii};
     j = 1;
     total_success = 0;
+    % log current problem
+    % fid = fopen('current_problem.txt','w');
+    % fprintf(fid,'%s\n\n',name);
+    % fclose(fid);
     for jj = n_mpecs
         mpec = mpecs(jj);
         w = mpec.w;
@@ -76,6 +79,12 @@ for ii = N_experiments
     
         disp([ num2str(jj) '/' num2str(length(mpecs)) ': ' 'solving ' char(mpec.name) ' with solver ' char(name)]);
         fprintf('Problem info:name = %s, n_w = %d, n_g = %d, n_comp = %d\n',name, length(w),length(g),length(G))
+
+        % log current problem
+        fid = fopen('current_problem.txt','w');
+        fprintf(fid,'%s\n',mpec.name);
+        fclose(fid);
+
         mpec_struct = struct('x',w,'f',f,'g',g,'G',G,'H',H);
         solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg,'ubg',ubg);
         % to add non-mpecsol solver you can add ifs here
@@ -100,8 +109,10 @@ for ii = N_experiments
         dstruct.n_lpec_total = [dstruct.n_lpec_total; stats.n_lpec_total];
 
         dstruct.max_cpu_time_nlp = [dstruct.max_cpu_time_nlp; max([stats.iter.cpu_time_nlp_phase_i_iter(:);stats.iter.cpu_time_nlp_phase_ii_iter(:)])];
-        dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max(stats.iter.cpu_time_nlp_phase_i_iter)];
-        dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max(stats.iter.cpu_time_nlp_phase_ii_iter)];
+        % dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max(stats.iter.cpu_time_nlp_phase_i_iter)];
+        % dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max(stats.iter.cpu_time_nlp_phase_ii_iter)];
+        dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max([stats.iter.cpu_time_nlp_phase_i_iter;0])];
+        dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max([stats.iter.cpu_time_nlp_phase_ii_iter,0])];
         dstruct.cpu_time = [dstruct.cpu_time; stats.cpu_time_total];
         dstruct.cpu_time_phase_i = [dstruct.cpu_time_phase_i; stats.cpu_time_phase_i];
         dstruct.cpu_time_phase_ii = [dstruct.cpu_time_phase_ii; stats.cpu_time_phase_ii];
@@ -110,7 +121,7 @@ for ii = N_experiments
         dstruct.cpu_time_nlp_phase_i = [dstruct.cpu_time_nlp_phase_i; stats.cpu_time_nlp_phase_i];
         dstruct.cpu_time_nlp_phase_ii = [dstruct.cpu_time_nlp_phase_ii; stats.cpu_time_nlp_phase_ii];
 
-        dstruct.max_cpu_time_lpec = [dstruct.max_cpu_time_lpec; max([stats.iter.cpu_time_lpec_phase_i_iter';stats.iter.cpu_time_lpec_phase_ii_iter'])];
+        dstruct.max_cpu_time_lpec = [dstruct.max_cpu_time_lpec; max([stats.iter.cpu_time_lpec_phase_i_iter';stats.iter.cpu_time_lpec_phase_ii_iter';0])];
         dstruct.cpu_time_lpec = [dstruct.cpu_time_lpec; stats.cpu_time_lpec];
         dstruct.cpu_time_lpec_phase_i = [dstruct.cpu_time_lpec_phase_i; stats.cpu_time_lpec_phase_i];
         dstruct.cpu_time_lpec_phase_ii = [dstruct.cpu_time_lpec_phase_ii; stats.cpu_time_lpec_phase_ii];       

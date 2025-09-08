@@ -5,7 +5,7 @@ import casadi.*
 %% Color order
 
 results_name = ['results/macmpec_general_' datestr(datetime("today"))]; % name for matlab .dat with results
-filename = 'macmpec_general4'; % name for figures and excel table
+filename = 'macmpec_general'; % name for figures and excel table
 
 %% Load macmpec
 macmpec_json = dir('macMPEC/*.json');
@@ -44,56 +44,47 @@ for ii=1:length(macmpec_json)
     mpecs = [mpecs,mpec];
 end
 
-% N_interesting = [];
-% for ii=1:length(macmpec_json)
-%     if mpecs(ii).n_w <= 150
-%         N_interesting = [N_interesting; ii];
-%     end
-% end
+N_interesting = [];
+for ii=1:length(macmpec_json)
+    if mpecs(ii).n_w <= 100
+        N_interesting = [N_interesting; ii];
+    end
+end
 
-% mpecs = mpecs(N_interesting);
+mpecs = mpecs(N_interesting);
 
 
 %% Define list of solvers to use
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-Gurobi-ET", "MPECopt-$\ell_1$-Gurobi", ...
-                  "Reg" , "NLP", ...
+solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Highs"
+                  "Reg", "NLP", ...
                   "MINLP"];
-
-
-% solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-Early", "MPECopt-$\ell_1$-Gurobi", ...
-%                   "Reg" , "NLP", ...
-%                   "MINLP"];
-
 
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
                     @mpec_homotopy_solver,@mpec_homotopy_solver,...
                     @mpec_minlp_solver};
 
-default_opts1 = mpecopt.Options();
-default_opts1.solver_name = solver_names{1};
-default_opts1.settings_lpec.lpec_solver = "Gurobi";
-default_opts1.relax_and_project_homotopy_parameter_steering = "Direct";
-% default_opts1.initialization_strategy = "FeasibilityEll1General";
-
-% default_opts2 = mpecopt.Options();
-% default_opts2.solver_name = solver_names{2};
-% default_opts2.settings_lpec.lpec_solver = "Highs_casadi";
-% default_opts2.settings_lpec.stop_lpec_at_feasible = true;
-% default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
-% default_opts2.rho_TR_phase_i_init = 1e-3;
-
-default_opts2 = mpecopt.Options();
-default_opts2.solver_name = solver_names{2};
-default_opts2.settings_lpec.lpec_solver = "Gurobi";
-default_opts2.relax_and_project_homotopy_parameter_steering = "Direct";
-default_opts2.settings_lpec.stop_lpec_at_feasible = true;
-% default_opts2.rho_TR_phase_i_init = 1e-3;
+opts1 = mpecopt.Options();
+opts1.solver_name = solver_names{1};
+opts1.settings_lpec.lpec_solver = "Gurobi";
+opts1.relax_and_project_homotopy_parameter_steering = "Direct";
+opts1.use_one_nlp_solver = false;
+% opts1.initialization_strategy = "FeasibilityEll1General";
 
 
-default_opts3 = mpecopt.Options();
-default_opts3.solver_name = solver_names{3};
-default_opts3.settings_lpec.lpec_solver = "Gurobi";
-default_opts3.relax_and_project_homotopy_parameter_steering = "Ell_1";
+opts2 = mpecopt.Options();
+opts2.solver_name = solver_names{2};
+opts2.settings_lpec.lpec_solver = "Gurobi";
+opts2.relax_and_project_homotopy_parameter_steering = "Ell_1";
+opts2.use_one_nlp_solver = false;
+% opts2.settings_lpec.stop_lpec_at_feasible = true;
+% opts2.rho_TR_phase_i_init = 1e-3;
+
+
+opts3 = mpecopt.Options();
+opts3.solver_name = solver_names{1};
+opts3.settings_lpec.lpec_solver = "Highs";
+opts3.relax_and_project_homotopy_parameter_steering = "Direct";
+opts3.use_one_nlp_solver = false;
 
 
 scholtes_opts1 = HomotopySolverOptions();
@@ -105,8 +96,9 @@ scholtes_opts2.max_iter = 1;
 scholtes_opts2.sigma0 = 0;
 
 minlp_opts = MINLPSolverOptions();
+minlp_opts.settings_casadi_nlp.bonmin.time_limit = 600;
 
-opts = {default_opts1, default_opts2, default_opts3, ...
+opts = {opts1, opts2, opts3, ...
        scholtes_opts1, scholtes_opts2,...
        minlp_opts}; % list of options to pass to mpecsol (option structs)
 
@@ -114,6 +106,8 @@ opts = {default_opts1, default_opts2, default_opts3, ...
 %% Create data struct
 % N_experiments = [1, 3:6];
 N_experiments = [1:6];
+N_experiments  = [1, 4, 6];
+
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 
 %%  Pick which results to plot
@@ -181,7 +175,7 @@ plot_settings.lpec_phases_cpu_time = 0;
 plot_settings.max_lpec_cpu_time = 0;
 plot_settings.stationary_points = 1;
 plot_settings.b_stationarity = 1;
-plot_settings.b_stationarty_as_success_criterion = 1;
+plot_settings.b_stationarty_as_success_criterion = 0;
 plot_settings.plot_only_sucessful = 1;
 plot_settings.bar_comparisson_plots = 0;
 

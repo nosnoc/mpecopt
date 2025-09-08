@@ -114,8 +114,8 @@ for ii = N_experiments
         dstruct.n_lpec_total = [dstruct.n_lpec_total; stats.n_lpec_total];
 
         dstruct.max_cpu_time_nlp = [dstruct.max_cpu_time_nlp; max([stats.iter.cpu_time_nlp_phase_i_iter(:);stats.iter.cpu_time_nlp_phase_ii_iter(:)])];
-        dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max(stats.iter.cpu_time_nlp_phase_i_iter)];
-        dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max(stats.iter.cpu_time_nlp_phase_ii_iter)];
+        dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max([stats.iter.cpu_time_nlp_phase_i_iter;0])];
+        dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max([stats.iter.cpu_time_nlp_phase_ii_iter,0])];
         dstruct.cpu_time = [dstruct.cpu_time; stats.cpu_time_total];
         dstruct.cpu_time_phase_i = [dstruct.cpu_time_phase_i; stats.cpu_time_phase_i];
         dstruct.cpu_time_phase_ii = [dstruct.cpu_time_phase_ii; stats.cpu_time_phase_ii];
@@ -124,7 +124,7 @@ for ii = N_experiments
         dstruct.cpu_time_nlp_phase_i = [dstruct.cpu_time_nlp_phase_i; stats.cpu_time_nlp_phase_i];
         dstruct.cpu_time_nlp_phase_ii = [dstruct.cpu_time_nlp_phase_ii; stats.cpu_time_nlp_phase_ii];
 
-        dstruct.max_cpu_time_lpec = [dstruct.max_cpu_time_lpec; max([stats.iter.cpu_time_lpec_phase_i_iter';stats.iter.cpu_time_lpec_phase_ii_iter'])];
+        dstruct.max_cpu_time_lpec = [dstruct.max_cpu_time_lpec; max([stats.iter.cpu_time_lpec_phase_i_iter';stats.iter.cpu_time_lpec_phase_ii_iter';0])];
         dstruct.cpu_time_lpec = [dstruct.cpu_time_lpec; stats.cpu_time_lpec];
         dstruct.cpu_time_lpec_phase_i = [dstruct.cpu_time_lpec_phase_i; stats.cpu_time_lpec_phase_i];
         dstruct.cpu_time_lpec_phase_ii = [dstruct.cpu_time_lpec_phase_ii; stats.cpu_time_lpec_phase_ii];       

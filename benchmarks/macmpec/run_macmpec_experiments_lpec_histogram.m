@@ -4,8 +4,8 @@ import casadi.*
 
 %% Color order
 
-results_name = ['results/macmpec_general_' datestr(datetime("today"))]; % name for matlab .dat with results
-filename = 'macmpec_general4'; % name for figures and excel table
+results_name = ['results/macmpec_lpec_' datestr(datetime("today"))]; % name for matlab .dat with results
+filename = 'macmpec_lpec'; % name for figures and excel table
 
 %% Load macmpec
 macmpec_json = dir('macMPEC/*.json');
@@ -89,7 +89,7 @@ opts = {opts1, opts2, opts3, opts4}; % list of options to pass to mpecsol (optio
 
 
 %% Create data struct
-N_experiments = [1:4];
+N_experiments = [1:2];
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 
 %%  Pick which results to plot

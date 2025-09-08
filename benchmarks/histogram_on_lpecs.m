@@ -1,16 +1,23 @@
 %% Evaluating LPEC MILP efficiency:
 close all; clc;
-dtable;
-lpec_dstruct;
+% dtable;
+% lpec_dstruct;
+
+S = load('macmpec_general_01-Sep-2025_lpec_details');
+lpec_dstruct = S.lpec_dstruct;
+S = load('macmpec_general_01-Sep-2025');
+dtable = S.dtable;
+
 
 plot_cpu = false;
 % Filter by solver and success
-solver = "Gurobi";
-solver = "Gurobi-Early";
-solver_names  = ["Gurobi", "Gurobi-early", "Highs", "Highs-early"];
 
-solver = solver_names{1}
-idx = strcmp(dtable.solver_name, solver) & dtable.success == 1;
+% solver_names  = ["Gurobi", "Gurobi-early-I", "Gurobi-early-I-II", "Highs", "Highs-early"];
+solver_names = unique(dtable.solver_name);
+
+solver = solver_names{2};
+idx = (dtable.solver_name == solver) & dtable.success == 1;
+
 
 % ------------------------
 % Helper functions
@@ -18,12 +25,12 @@ idx = strcmp(dtable.solver_name, solver) & dtable.success == 1;
 
 % Replace zeros by ones in a vector
 function y = replace_zeros(x)
-    if all(x == 0)
-        y = ones(size(x));
-    else
-        x(x == 0) = 1;
-        y = x;
-    end
+if all(x == 0)
+    y = ones(size(x));
+else
+    x(x == 0) = 1;
+    y = x;
+end
 end
 
 % Postprocess nodecount cells
@@ -44,16 +51,16 @@ process_cpu = @(C) cellfun(@(x) ...
 
 % Conversion of raw vector (per problem, for iteration plots)
 function y = convert_vec(x)
-    if isempty(x)
-        y = 0;
+if isempty(x)
+    y = 0;
+else
+    if all(x == 0)
+        y = ones(size(x));
     else
-        if all(x == 0)
-            y = ones(size(x));
-        else
-            x(x == 0) = 1;
-            y = x;
-        end
+        x(x == 0) = 1;
+        y = x;
     end
+end
 end
 
 % ------------------------
@@ -63,23 +70,58 @@ nc_i  = cell2mat(process_cells(lpec_dstruct.nodecount_phase_i(idx)));
 nc_ii = cell2mat(process_cells(lpec_dstruct.nodecount_phase_ii(idx)));
 nc_tot = [nc_i, nc_ii];
 
-% Histograms (nodecounts)
-figure; 
-subplot(131)
-histogram(nc_i, 'BinMethod', 'integers');
-title('Nodecount Phase I - each LPEC call'); xlabel('Nodes'); ylabel('Frequency'); grid on;
-% xticks(min(nc_i):max(nc_i));
+figure;
 
-subplot(132)
-histogram(nc_ii, 'BinMethod', 'integers');
-title('Nodecount Phase II - each LPEC call'); xlabel('Nodes'); ylabel('Frequency'); grid on;
-xticks(min(nc_ii):max(nc_ii));
+% --- Phase I ---
+subplot(1,2,1)
+h1 = histogram(nc_i, 'BinMethod', 'integers');
+title('Nodecount Phase I - each LPEC call');
+xlabel('Nodes'); ylabel('Frequency'); grid on;
 
-subplot(133)
-histogram(nc_tot, 'BinMethod', 'integers');
-title('Total Nodecount - each LPEC call'); xlabel('Nodes'); ylabel('Frequency'); grid on;
+% annotate counts
+for k = 1:numel(h1.BinEdges)-1
+    if h1.Values(k) > 0
+        x = (h1.BinEdges(k) + h1.BinEdges(k+1))/2;
+        y = h1.Values(k);
+        text(x, y, num2str(y), 'HorizontalAlignment','center','VerticalAlignment','bottom');
+    end
+end
+
+% adjust ylim
+ymax1 = max(h1.Values);
+ylim([0 ymax1 + max(2,ceil(0.2*ymax1))])
+
+% --- Phase II ---
+subplot(1,2,2)
+h2 = histogram(nc_ii, 'BinMethod', 'integers');
+title('Nodecount Phase II - each LPEC call');
+xlabel('Nodes'); ylabel('Frequency'); grid on;
+
+% enforce nicer axis if only one bar
+if numel(unique(nc_ii)) == 1
+    xlim([0 10])
+end
+
+% annotate counts
+for k = 1:numel(h2.BinEdges)-1
+    if h2.Values(k) > 0
+        x = (h2.BinEdges(k) + h2.BinEdges(k+1))/2;
+        y = h2.Values(k);
+        text(x, y, num2str(y), 'HorizontalAlignment','center','VerticalAlignment','bottom');
+    end
+end
+
+% adjust ylim
+ymax2 = max(h2.Values);
+ylim([0 ymax2 + max(2,ceil(0.2*ymax2))])
+
+
+% xticks(min(nc_ii):max(nc_ii));
+
+% subplot(133)
+% histogram(nc_tot, 'BinMethod', 'integers');
+% title('Total Nodecount - each LPEC call'); xlabel('Nodes'); ylabel('Frequency'); grid on;
 % xticks(min(nc_tot):max(nc_tot));
-
 
 
 % ------------------------
@@ -89,25 +131,27 @@ nc_i  = process_cells_cummulative(lpec_dstruct.nodecount_phase_i(idx));
 nc_ii = process_cells_cummulative(lpec_dstruct.nodecount_phase_ii(idx));
 nc_tot = nc_i + nc_ii;
 if 0
-% Histograms (nodecounts)
-figure; 
-subplot(131)
-histogram(nc_i, 'BinMethod', 'integers');
-title('Nodecount Phase I'); xlabel('Nodes'); ylabel('Frequency'); grid on;
-% xticks(min(nc_i):max(nc_i));
+    % Histograms (nodecounts)
+    figure;
+    subplot(131)
+    histogram(nc_i, 'BinMethod', 'integers');
+    title('Nodecount Phase I'); xlabel('Nodes'); ylabel('Frequency'); grid on;
+    % xticks(min(nc_i):max(nc_i));
 
-subplot(132)
-histogram(nc_ii, 'BinMethod', 'integers');
-title('Nodecount Phase II'); xlabel('Nodes'); ylabel('Frequency'); grid on;
-xticks(min(nc_ii):max(nc_ii));
+    subplot(132)
+    histogram(nc_ii, 'BinMethod', 'integers');
+    title('Nodecount Phase II'); xlabel('Nodes'); ylabel('Frequency'); grid on;
+    % xticks(min(nc_ii):max(nc_ii));
 
-subplot(133)
-histogram(nc_tot, 'BinMethod', 'integers');
-title('Total Nodecount'); xlabel('Nodes'); ylabel('Frequency'); grid on;
-% xticks(min(nc_tot):max(nc_tot));
+    subplot(133)
+    histogram(nc_tot, 'BinMethod', 'integers');
+    title('Total Nodecount'); xlabel('Nodes'); ylabel('Frequency'); grid on;
+    % xticks(min(nc_tot):max(nc_tot));
 end
 % Largest problem by total nodecount
-[~, max_idx_rel] = max(nc_tot);
+[sort_val, sort_idx_rel] = sort(nc_tot);
+max_idx_rel = sort_idx_rel(end-1);
+% [~, max_idx_rel] = max(nc_tot);
 max_idx_all = find(idx); % indices in original table
 max_idx = max_idx_all(max_idx_rel);
 
@@ -138,9 +182,10 @@ if plot_cpu
 end
 
 % ------------------------
+% max_idx = 14;
 %% Iteration plot for max problem (nodecounts)
 % ------------------------
-vec_i =  cell2mat(process_cells(lpec_dstruct.nodecount_phase_i(max_idx))); 
+vec_i =  cell2mat(process_cells(lpec_dstruct.nodecount_phase_i(max_idx)));
 vec_ii = cell2mat(process_cells(lpec_dstruct.nodecount_phase_ii(max_idx)));
 % vec_i = convert_vec(vec_i);
 % vec_ii = convert_vec(vec_ii);
@@ -180,7 +225,6 @@ ylabel('CPU Time [s]');
 legend('show'); grid on;
 %%
 %% Iteration plot for max problem (nodecounts)
-max_idx = 7
 % ------------------------
 vec_i = lpec_dstruct.nodecount_phase_i{max_idx};
 vec_ii = lpec_dstruct.nodecount_phase_ii{max_idx};
@@ -193,8 +237,8 @@ x_combined = 1:length(combined_vec);
 
 % Create color array - blue for Phase I, orange for Phase II
 colors = [repmat([0 0.4470 0.7410], length(vec_i), 1); ...
-          repmat([0.8500 0.3250 0.0980], length(vec_ii), 1)];
-
+    repmat([0.8500 0.3250 0.0980], length(vec_ii), 1)];
+%%
 figure;
 subplot(121)
 b = bar(x_combined, combined_vec, 'FaceColor', 'flat');
@@ -216,6 +260,10 @@ legend([h1, h2], {'Phase I', 'Phase II'}, 'Location', 'best');
 % ------------------------
 cpu_vec_i = lpec_dstruct.cpu_time_lpec_phase_i{max_idx};
 cpu_vec_ii = lpec_dstruct.cpu_time_lpec_phase_ii{max_idx};
+
+cpu_vec_i(cpu_vec_i==0)  = [];
+cpu_vec_ii(cpu_vec_ii==0)  = [];
+
 if isempty(cpu_vec_i), cpu_vec_i = 0; end
 if isempty(cpu_vec_ii), cpu_vec_ii = 0; end
 
@@ -227,7 +275,7 @@ x_cpu_combined = 1:length(combined_cpu);
 
 % Create color array for CPU plot
 cpu_colors = [repmat([0 0.4470 0.7410], length(cpu_vec_i), 1); ...
-              repmat([0.8500 0.3250 0.0980], length(cpu_vec_ii), 1)];
+    repmat([0.8500 0.3250 0.0980], length(cpu_vec_ii), 1)];
 
 subplot(122)
 b2 = bar(x_cpu_combined, combined_cpu, 'FaceColor', 'flat');
@@ -241,3 +289,4 @@ hold on;
 h3 = bar(NaN, NaN, 'FaceColor', [0 0.4470 0.7410]);
 h4 = bar(NaN, NaN, 'FaceColor', [0.8500 0.3250 0.0980]);
 legend([h3, h4], {'Phase I', 'Phase II'}, 'Location', 'best');
+
