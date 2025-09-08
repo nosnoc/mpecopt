@@ -117,9 +117,11 @@ solver_settings.settings_lpec.stop_lpec_at_feasible = true;
 solver_settings.settings_lpec.stop_lpec_at_descent = true;
 % solver_settings.settings_casadi_nlp.ipopt.fixed_variable_treatment = 'relax_bounds';
 % solver_settings.initialization_strategy = "FeasibilityEll1General";
-% solver_settings.rho_TR_phase_i_init = 10;
+% solver_settings.rho_TR_phase_ii_init = 1e-4;
+% solver_settings.consider_all_complementarities_in_lpec = false;
 % solver_settings.tol_active = 1e-6;
 solver_settings.use_one_nlp_solver = true;
+solver_settings.compute_tnlp_stationary_point = false;
 tic
 solver = mpecopt.Solver(mpec, solver_settings);
 toc

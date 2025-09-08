@@ -15,7 +15,7 @@ plot_cpu = false;
 % solver_names  = ["Gurobi", "Gurobi-early-I", "Gurobi-early-I-II", "Highs", "Highs-early"];
 solver_names = unique(dtable.solver_name);
 
-solver = solver_names{2};
+solver = solver_names{1};
 idx = (dtable.solver_name == solver) & dtable.success == 1;
 
 

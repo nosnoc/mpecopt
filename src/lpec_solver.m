@@ -111,7 +111,8 @@ switch settings.lpec_solver
         params.OptimalityTol = 1e-9;
         if settings.stop_lpec_at_feasible && settings.is_in_phase_i
             % terminate phase i lpecs at a feasible point
-            params.MIPGap = 1;
+            % params.MIPGap = 1;
+            params.SolutionLimit = 1;
         end
         if settings.stop_lpec_at_descent && ~settings.is_in_phase_i
             % terminate phase ii lpecs at a dscent direction
@@ -281,7 +282,7 @@ switch settings.lpec_solver
             cpu_time_gurobi = nan;
         end
 
-        if ( isequal(result_gurobi.status,'OPTIMAL') || isequal(result_gurobi.status,'NODE_LIMIT')|| isequal(result_gurobi.status,'USER_OBJ_LIMIT') ) && isfield(result_gurobi,'x')
+        if ( isequal(result_gurobi.status,'OPTIMAL') || isequal(result_gurobi.status,'NODE_LIMIT')|| isequal(result_gurobi.status,'USER_OBJ_LIMIT') || isequal(result_gurobi.status,'SOLUTION_LIMIT')) && isfield(result_gurobi,'x')
             results.d_lpec = result_gurobi.x(1:lpec.dims.n_primal);
             results.y_lpec = result_gurobi.x(end-lpec.dims.n_auxiliary+1:end);
             results.f_opt = result_gurobi.objval;

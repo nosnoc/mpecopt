@@ -83,8 +83,7 @@ length(mpecs)
 
 %% Solver settings
 solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Gurobi-ET",...
-                  "Reg", "NLP", "$\ell_1$-Penalty",...
-                  "MINLP"];
+                  "Reg", "NLP", "$\ell_1$-Penalty", "MINLP"];
 
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
                     @mpec_homotopy_solver,@mpec_homotopy_solver, @mpec_homotopy_solver,...
@@ -120,7 +119,7 @@ opts3.relax_and_project_homotopy_parameter_steering = "Direct";
 opts3.use_one_nlp_solver = true;
 opts3.settings_lpec.stop_lpec_at_feasible = true;
 opts3.settings_lpec.stop_lpec_at_descent = true;
-
+opts3.consider_all_complementarities_in_lpec = false;
 
 
 scholtes_opts1 = HomotopySolverOptions();
@@ -145,7 +144,7 @@ opts = {opts1, opts2, opts3, ...
 
 
 %% Create data struct
-N_experiments = [1 4 5 2 6 7 3];
+N_experiments = [1 4 5 3 2 6 7];
 
 
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable

@@ -87,6 +87,7 @@ opts3.relax_and_project_homotopy_parameter_steering = "Direct";
 opts3.use_one_nlp_solver = false;
 opts3.settings_lpec.stop_lpec_at_feasible = true;
 opts3.settings_lpec.stop_lpec_at_descent = true;
+opts3.consider_all_complementarities_in_lpec = false;
 
 scholtes_opts1 = HomotopySolverOptions();
 scholtes_opts1.homotopy_parameter_steering = 'Direct';
