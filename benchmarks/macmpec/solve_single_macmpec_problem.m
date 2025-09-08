@@ -15,7 +15,7 @@ problame_name = 'qpec-200-3';
 % problame_name =  'nash1a'; 
 % problame_name =  'nash1c'; 
 % problame_name =  'tap-09'; 
-problame_name = ' design-cent-31';
+% problame_name = ' design-cent-31';
 
 % problame_name = 'pack-rig2p-16';
 
@@ -94,9 +94,9 @@ fprintf('Problem info, n_w = %d, n_g = %d, n_comp = %d, name = %s\n', length(w),
 %% Homotopy solver
 settings_homotopy = HomotopySolverOptions();
 settings_homotopy.homotopy_parameter_steering = 'Direct';
-[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
-f_opt_homotopy = full(result_homotopy.f);
-w_opt_homotopy = full(result_homotopy.x);
+% [result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
+% f_opt_homotopy = full(result_homotopy.f);
+% w_opt_homotopy = full(result_homotopy.x);
 
 %% MINLP solver
 settings_minlp = MINLPSolverOptions();
@@ -104,7 +104,7 @@ settings_minlp.settings_casadi_nlp.bonmin.time_limit = 25;
 settings_minlp.settings_casadi_nlp.bonmin.node_limit = 5;
 settings_minlp.settings_casadi_nlp.bonmin.solution_limit = 5;
 settings_minlp.settings_casadi_nlp.bonmin.max_consecutive_failures = 5;
-[result_minlp,stats_minlp] = mpec_minlp_solver(mpec,solver_initalization,settings_minlp);
+% [result_minlp,stats_minlp] = mpec_minlp_solver(mpec,solver_initalization,settings_minlp);
 % f_opt_minlp = full(result_minlp.f);
 % w_opt_minlp = full(result_minlp.x);
 
@@ -114,6 +114,7 @@ solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
 solver_settings.settings_lpec.lpec_solver = "Gurobi";
 % solver_settings.settings_casadi_nlp.ipopt.max_iter = 4000;
 solver_settings.settings_lpec.stop_lpec_at_feasible = true;
+solver_settings.settings_lpec.stop_lpec_at_descent = true;
 % solver_settings.settings_casadi_nlp.ipopt.fixed_variable_treatment = 'relax_bounds';
 % solver_settings.initialization_strategy = "FeasibilityEll1General";
 % solver_settings.rho_TR_phase_i_init = 10;

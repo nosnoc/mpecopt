@@ -115,7 +115,7 @@ switch settings.lpec_solver
         end
         if settings.stop_lpec_at_descent && ~settings.is_in_phase_i
             % terminate phase ii lpecs at a dscent direction
-            params.BestObjStop = -0.05*norm(f_lpec)*lpec.rho_TR;
+            params.BestObjStop = -0.01*norm(f_lpec)*lpec.rho_TR;
         end
         % params.ObjScale = -0.5;     % https://www.gurobi.com/documentation/current/refman/objscale.html#parameter:ObjScale
         % params.ScaleFlag=0; % default -1, % https://www.gurobi.com/documentation/current/refman/scaleflag.html#parameter:ScaleFlag
@@ -281,7 +281,7 @@ switch settings.lpec_solver
             cpu_time_gurobi = nan;
         end
 
-        if (isequal(result_gurobi.status,'OPTIMAL') || isequal(result_gurobi.status,'NODE_LIMIT')) && isfield(result_gurobi,'x')
+        if ( isequal(result_gurobi.status,'OPTIMAL') || isequal(result_gurobi.status,'NODE_LIMIT')|| isequal(result_gurobi.status,'USER_OBJ_LIMIT') ) && isfield(result_gurobi,'x')
             results.d_lpec = result_gurobi.x(1:lpec.dims.n_primal);
             results.y_lpec = result_gurobi.x(end-lpec.dims.n_auxiliary+1:end);
             results.f_opt = result_gurobi.objval;

@@ -55,7 +55,7 @@ mpecs = mpecs(N_interesting);
 
 
 %% Define list of solvers to use
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Highs"
+solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Guroby-ET", ...
                   "Reg", "NLP", ...
                   "MINLP"];
 
@@ -82,10 +82,11 @@ opts2.use_one_nlp_solver = false;
 
 opts3 = mpecopt.Options();
 opts3.solver_name = solver_names{1};
-opts3.settings_lpec.lpec_solver = "Highs";
+opts3.settings_lpec.lpec_solver = "Gurobi";
 opts3.relax_and_project_homotopy_parameter_steering = "Direct";
 opts3.use_one_nlp_solver = false;
-
+opts3.settings_lpec.stop_lpec_at_feasible = true;
+opts3.settings_lpec.stop_lpec_at_descent = true;
 
 scholtes_opts1 = HomotopySolverOptions();
 scholtes_opts1.homotopy_parameter_steering = 'Direct';
@@ -105,8 +106,8 @@ opts = {opts1, opts2, opts3, ...
 
 %% Create data struct
 % N_experiments = [1, 3:6];
-N_experiments = [1:6];
-N_experiments  = [1, 4, 6];
+N_experiments = [1:7];
+% N_experiments  = [1, 4, 6];
 
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 
