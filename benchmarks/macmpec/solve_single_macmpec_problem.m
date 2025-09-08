@@ -123,7 +123,9 @@ solver_settings.use_one_nlp_solver = true;
 tic
 solver = mpecopt.Solver(mpec, solver_settings);
 toc
+
 [result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);
+stats_mpecopt.cpu_time_total
 
 % [solution,stats] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 w_opt_mpecopt = full(result_mpecopt.x);

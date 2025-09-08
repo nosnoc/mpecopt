@@ -82,7 +82,7 @@ length(mpecs)
 
 
 %% Solver settings
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Highs",...
+solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Gurobi-ET",...
                   "Reg", "NLP", "$\ell_1$-Penalty",...
                   "MINLP"];
 
@@ -107,11 +107,20 @@ opts2.use_one_nlp_solver = true;
 % opts2.rho_TR_phase_i_init = 1e-3;
 
 
+% opts3 = mpecopt.Options();
+% opts3.solver_name = solver_names{3};
+% opts3.settings_lpec.lpec_solver = "Highs";
+% opts3.relax_and_project_homotopy_parameter_steering = "Direct";
+% opts3.use_one_nlp_solver = true;
+% 
 opts3 = mpecopt.Options();
-opts3.solver_name = solver_names{1};
-opts3.settings_lpec.lpec_solver = "Highs";
+opts3.solver_name = solver_names{3};
+opts3.settings_lpec.lpec_solver = "Gurobi";
 opts3.relax_and_project_homotopy_parameter_steering = "Direct";
 opts3.use_one_nlp_solver = true;
+opts3.settings_lpec.stop_lpec_at_feasible = true;
+opts3.settings_lpec.stop_lpec_at_descent = true;
+
 
 
 scholtes_opts1 = HomotopySolverOptions();
@@ -136,7 +145,7 @@ opts = {opts1, opts2, opts3, ...
 
 
 %% Create data struct
-N_experiments = [1 4 5 2 6 7];
+N_experiments = [1 4 5 2 6 7 3];
 
 
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable

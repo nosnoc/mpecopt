@@ -81,7 +81,7 @@ opts2.use_one_nlp_solver = false;
 
 
 opts3 = mpecopt.Options();
-opts3.solver_name = solver_names{1};
+opts3.solver_name = solver_names{3};
 opts3.settings_lpec.lpec_solver = "Gurobi";
 opts3.relax_and_project_homotopy_parameter_steering = "Direct";
 opts3.use_one_nlp_solver = false;
