@@ -1177,7 +1177,11 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     x = mpec.w;
                 end
                 f = mpec.f;
-                g = SX(mpec.g);
+                if strcmp(class(x),'casadi.SX')
+                    g = SX(mpec.g);
+                else
+                    g = MX(mpec.g);
+                end
                 G = mpec.G;
                 H = mpec.H;
 
@@ -1293,6 +1297,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 % find index set
                 if n_comp > 0
                     % TODO(@anton) do we actually need this here or can we calculate these "analytically"
+                    % TODO(@anton) THIS does not work for MX -- need entierly different implementation!
                     ind_x1 = [];
                     ind_x2 = [];
                     % HERE BE DRAGONS: This is using some casadi internals to deduplicate x1, x2, expressions.

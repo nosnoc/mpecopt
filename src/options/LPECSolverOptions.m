@@ -12,7 +12,8 @@ classdef LPECSolverOptions< handle
         rel_tol(1,1) double {mustBeReal, mustBeNonempty} = 1e-9;
         abs_tol(1,1) double {mustBeReal, mustBeNonempty} = 1e-9;
         solve_lpec_with_cutoff (1,1) logical = false;
-        stop_lpec_at_feasible (1,1) logical = false;
+        stop_lpec_at_feasible (1,1) logical = false; % Stop at lpec feasible point in ph i
+        stop_lpec_at_descent (1,1) logical = false; % Stop at descent direction in Phase II lepcs (sufficent for pogress) (supported only for gurobi atm)
         trust_region_on_slacks  (1,1) logical = false; % Do the slack variables for the feasbility trasformation have a TR constraint?
         is_in_phase_i (1,1) logical = true; % tell lpec solver which phase it is
         homotopy_solver_settings 

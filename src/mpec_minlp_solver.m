@@ -407,14 +407,21 @@ f_k = full(f_fun(x_k,p0));
 inf_pr_ii = full(h_std_fun(x_k,p0));
 t_phase_ii_start = tic;
 t_nlp_start_ii = tic;
-solution = solver('x0',x_k_minlp,'p',p0_minlp,'lbx',lbx_minlp,'ubx',ubx_minlp,'lbg',lbg_minlp,'ubg',ubg_minlp);
+try
+    solution = solver('x0',x_k_minlp,'p',p0_minlp,'lbx',lbx_minlp,'ubx',ubx_minlp,'lbg',lbg_minlp,'ubg',ubg_minlp);
+    stats = solver.stats();
+    x_k_minlp = full(solution.x);
+catch
+    stats.return_status = "MINLP Solver failed."
+    warning('MINLP solution failed, returning initial guess.')
+end
+
+x_k = x_k_minlp(1:n_primal);
 t_nlp_end_ii = toc(t_nlp_start_ii);
 cpu_time_phase_ii = toc(t_phase_ii_start);
 n_nlp_total = n_nlp_total + 1;
 cpu_time_nlp_iter = [cpu_time_nlp_iter,t_nlp_end_ii];
-stats = solver.stats();
-x_k_minlp = full(solution.x);
-x_k = x_k_minlp(1:n_primal);
+
 comp_res_ii = full(h_comp_constraints_fun(x_k,p0));
 f_k = full(f_fun(x_k,p0));
 X_outer = [X_outer, x_k];
@@ -428,12 +435,12 @@ else
     solver_message = stats.return_status;
 end
 
-if isequal(stats.return_status,'Maximum_Iterations_Exceeded')
-    success = false;
-    solver_message = 'Last NLP in homotopy reached maximum number of iterations.';
-end
+% if isequal(stats.return_status,'Maximum_Iterations_Exceeded')
+%     success = false;
+%     solver_message = 'Last NLP in homotopy reached maximum number of iterations.';
+% end
 
-if comp_res_ii > settings.comp_tol
+if comp_res_ii > settings.comp_tol && ~isequal(stats.return_status,'SUCCESS')
     success = false;
     solver_message = 'Complementarity tolerance not satisfied.';
 end

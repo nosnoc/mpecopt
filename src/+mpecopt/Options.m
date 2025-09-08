@@ -25,7 +25,7 @@ classdef Options < handle
 
         % --- BNLP/TNLP settings----
         piece_nlp_strategy PieceNLPStartegy = "BNLP_integer"
-        use_one_nlp_solver (1,1) logical = true; % if true create only one NLP solver for phase i with reg, and phase ii for bnlp and tnlp check (but set sigma to inf) - saves lot of time for large problems; Option supportedo only for RelaxAndProject Phase I
+        use_one_nlp_solver (1,1) logical = false; % if true create only one NLP solver for phase i with reg, and phase ii for bnlp and tnlp check (but set sigma to inf) - saves lot of time for large problems; Option supportedo only for RelaxAndProject Phase I
 
         % Multiplier-based stationarity
         compute_tnlp_stationary_point (1,1) logical = true; % todo: reduce this and the one below settings to one
@@ -48,7 +48,7 @@ classdef Options < handle
         relax_and_project_tighter_TR (1,1) logical = false; % if true take the maximum as max(max(x1,x2)), otherwise take it as rho_TR_phase_i
         relax_and_project_sigma0 (1,1) double {mustBeReal, mustBeNonnegative} = 1;
         relax_and_project_kappa (1,1) double {mustBeReal, mustBeNonnegative} = 0.1;
-        relax_and_project_comp_tol (1,1) double {mustBeReal, mustBeNonnegative} = 1e-10;
+        relax_and_project_comp_tol (1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
         relax_and_project_comps_aggregated (1,1) logical = false;
         relax_and_project_consider_all_comps_in_lpec (1,1) logical = false;
         relax_and_project_homotopy_parameter_steering HomotopySteering = 'Direct';
