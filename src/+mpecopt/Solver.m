@@ -1496,7 +1496,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     lpec.f = nabla_f_k;
                 end
                 t_lpec_preparation_iter = tic;
-                lpec = create_lpec_subproblem(x_k,p0,rho_TR_k_l,lpec_casadi,dims,opts,opts.tol_active);
+                lpec = create_lpec_subproblem(x_k,p0,rho_TR_k_l,lpec_casadi,dims,opts,opts.tol_active*10); % less conservative active set tol for reduced lpecs (tends to include more biactives) 
                 stats.iter.cpu_time_lpec_preparation_iter = [stats.iter.cpu_time_lpec_preparation_iter;toc(t_lpec_preparation_iter)];
 
                 % --------------------------- Inner (minor) itrations ------------------------------------------
