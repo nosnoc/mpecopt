@@ -94,7 +94,7 @@ fprintf('Problem info, n_w = %d, n_g = %d, n_comp = %d, name = %s\n', length(w),
 %% Homotopy solver
 settings_homotopy = HomotopySolverOptions();
 settings_homotopy.homotopy_parameter_steering = 'Direct';
-% [result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
+[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
 % f_opt_homotopy = full(result_homotopy.f);
 % w_opt_homotopy = full(result_homotopy.x);
 

@@ -6,7 +6,7 @@ filename = 'nonlinear_mpec_general2'; % name for figures and excel table
 results_name = ['results/' filename '_' datestr(datetime("today"))]; % name for matlab .dat with results
 
 %% Generate test set
-settings.casadi_variable_type = 'SX';
+settings.casadi_variable_type = 'MX';
 settings.nonlinear_eq_constraints = 1;
 settings.nonlinear_ineq_constraints = 1;
 settings.s_nonlinear_eq = 0.01;
@@ -33,6 +33,11 @@ settings.objective_functions = {'Quadratic_psd','Quadratic_ind',...
     'Cube','Bdexp','Genhumps',...
     'Arwhead', 'Quartc', 'Cosine', 'Sine',...
     'CURLY20', 'SCURLY30', 'FLETBV3M',...
+    'NCVXQP6','DIXCHLNV','EDENSCH',...
+    };
+
+
+settings.objective_functions = {'FLETBV3M',...
     'NCVXQP6','DIXCHLNV','EDENSCH',...
     };
 
@@ -66,9 +71,9 @@ dimensions.n_x_max = 1600;
 dimensions.n_x_min = 100;
 
 
-% dimensions.N_rand_prob = 1; % number of problems per objective
-% dimensions.n_x_max = 10;
-% dimensions.n_x_min = 1;
+dimensions.N_rand_prob = 1; % number of problems per objective
+dimensions.n_x_max = 10;
+dimensions.n_x_min = 1;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 
@@ -94,6 +99,7 @@ opts1.solver_name = solver_names{1};
 opts1.settings_lpec.lpec_solver = "Gurobi";
 opts1.relax_and_project_homotopy_parameter_steering = "Direct";
 opts1.use_one_nlp_solver = true;
+opts1.problem_in_vertical_from = true;
 % opts1.initialization_strategy = "FeasibilityEll1General";
 
 
@@ -102,6 +108,7 @@ opts2.solver_name = solver_names{2};
 opts2.settings_lpec.lpec_solver = "Gurobi";
 opts2.relax_and_project_homotopy_parameter_steering = "Ell_1";
 opts2.use_one_nlp_solver = true;
+opts2.problem_in_vertical_from = true;
 % opts2.settings_lpec.stop_lpec_at_feasible = true;
 % opts2.rho_TR_phase_i_init = 1e-3;
 
@@ -120,22 +127,29 @@ opts3.use_one_nlp_solver = true;
 opts3.settings_lpec.stop_lpec_at_feasible = true;
 opts3.settings_lpec.stop_lpec_at_descent = true;
 opts3.consider_all_complementarities_in_lpec = false;
+opts3.problem_in_vertical_from = true;
 
 
 scholtes_opts1 = HomotopySolverOptions();
 scholtes_opts1.homotopy_parameter_steering = 'Direct';
+scholtes_opts1.problem_in_vertical_from = true;
+
 
 scholtes_opts2 = HomotopySolverOptions();
 scholtes_opts2.homotopy_parameter_steering = 'Direct';
 scholtes_opts2.max_iter = 1;
 scholtes_opts2.sigma0 = 0;
+scholtes_opts2.problem_in_vertical_from = true;
+
 
 scholtes_opts3 = HomotopySolverOptions();
 scholtes_opts3.homotopy_parameter_steering = 'Ell_1';
+scholtes_opts3.problem_in_vertical_from = true;
+
 
 minlp_opts = MINLPSolverOptions();
 minlp_opts.settings_casadi_nlp.bonmin.time_limit = 900;
-
+scholtes_opts3.problem_in_vertical_from = true;
 
 opts = {opts1, opts2, opts3, ...
        scholtes_opts1, scholtes_opts2, scholtes_opts3,...

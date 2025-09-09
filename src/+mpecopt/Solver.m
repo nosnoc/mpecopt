@@ -275,7 +275,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                         end
 
                         if active_set_guess_exists && ~feasible_bnlp_found
-                            
+
                             if opts.use_one_nlp_solver
                                 lbx_bnlp_k = solver_initialization_relaxed.lbx;
                                 ubx_bnlp_k = solver_initialization_relaxed.ubx;
@@ -291,7 +291,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                                 ubx_bnlp_k(dims.ind_x2(I_plus_0)) = 0;
                                 t_presolve_nlp_iter = tic;
                                 results_nlp = mpec_casadi.solver('x0',x_k,'p',solver_initialization.p0,'lbx',lbx_bnlp_k,'ubx',ubx_bnlp_k,'lbg',solver_initialization.lbg,'ubg',solver_initialization.ubg);
-                                stats_nlp = mpec_casadi.solver.stats(); 
+                                stats_nlp = mpec_casadi.solver.stats();
                             end
                             cpu_time_bnlp_ii = toc(t_presolve_nlp_iter);
 
@@ -389,13 +389,13 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                                 else
                                     s = MX.sym('s',n_g); %define slack variables for ell_1 norm of generla constraints;
                                 end
-                                
+
                                 n_slacks = n_g;
                             else
                                 if strcmp(class(obj.mpec_casadi.x),'casadi.SX')
                                     s = SX.sym('s',1); %define slack variables for ell_inf norm of generla constraints;
                                 else
-                                    s = MX.sym('s',1); 
+                                    s = MX.sym('s',1);
                                 end
                                 n_slacks = 1;
                             end
@@ -1205,48 +1205,55 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 H_copy = H_fun(x,p);
 
                 % check if the comps are expressions or just subvectors of w.
-                if opts.lift_complementarities_full
-                    % define lift vairables
-                    if strcmp(class(x),'casadi.SX')
-                        x1 = SX.sym('x1',n_comp);
-                    else
-                        x1 = MX.sym('x1',n_comp);
-                    end
-                    % update x and init guess
-                    x = [x;x1];
-                    % lift
-                    g = [g;x1-G];
+                if opts.problem_in_vertical_from
+                    x1 = G;
+                    x2 = H;
+                    n_lift_x1 = 0;
+                    n_lift_x2 = 0;
                 else
-                    % lifting with only those that are not scaler
-                    % define lift vairables
-                    [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x,p);
-                    n_lift_x1 = length(ind_nonscalar_x1);
-                    if n_lift_x1 == 0
-                        % TODO(@anton) Figure out what this does.
-                        try
-                            x.jacobian(G_copy);
-                        catch
-                            n_lift_x1 = length(G_copy);
-                            ind_nonscalar_x1 = 1:n_lift_x1;
-                            ind_scalar = [];
-                        end
-                    end
-                    if n_lift_x1 > 0
+                    if opts.lift_complementarities_full
+                        % define lift vairables
                         if strcmp(class(x),'casadi.SX')
-                            x1_lift = SX.sym('x1_lift',n_lift_x1);
+                            x1 = SX.sym('x1',n_comp);
                         else
-                            x1_lift = MX.sym('x1_lift',n_lift_x1);
+                            x1 = MX.sym('x1',n_comp);
                         end
-                        % x1 = [x(ind_scalar);x1_lift];
                         % update x and init guess
-                        x = [x;x1_lift];
+                        x = [x;x1];
                         % lift
-                        g = [g;x1_lift-G(ind_nonscalar_x1)];
-
-                        x1 = G_copy;
-                        x1(ind_nonscalar_x1) = x1_lift;
+                        g = [g;x1-G];
                     else
-                        x1 = G;
+                        % lifting with only those that are not scaler
+                        % define lift vairables
+                        [ind_scalar,ind_nonscalar_x1, ind_map] = find_nonscalar(G,x,p);
+                        n_lift_x1 = length(ind_nonscalar_x1);
+                        if n_lift_x1 == 0
+                            % TODO(@anton) Figure out what this does.
+                            try
+                                x.jacobian(G_copy);
+                            catch
+                                n_lift_x1 = length(G_copy);
+                                ind_nonscalar_x1 = 1:n_lift_x1;
+                                ind_scalar = [];
+                            end
+                        end
+                        if n_lift_x1 > 0
+                            if strcmp(class(x),'casadi.SX')
+                                x1_lift = SX.sym('x1_lift',n_lift_x1);
+                            else
+                                x1_lift = MX.sym('x1_lift',n_lift_x1);
+                            end
+                            % x1 = [x(ind_scalar);x1_lift];
+                            % update x and init guess
+                            x = [x;x1_lift];
+                            % lift
+                            g = [g;x1_lift-G(ind_nonscalar_x1)];
+
+                            x1 = G_copy;
+                            x1(ind_nonscalar_x1) = x1_lift;
+                        else
+                            x1 = G;
+                        end
                     end
                 end
 
@@ -1261,6 +1268,8 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     x = [x;x2];
                     % lift
                     g = [g;x2-H];
+                    n_lift_x1 = 0;
+                    n_lift_x2 = 0;
                 else
                     % lifting with only those that are not scaler
                     [ind_scalar,ind_nonscalar_x2, ind_map] = find_nonscalar(H,x,p);
@@ -1296,31 +1305,42 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
 
                 % find index set
                 if n_comp > 0
-                    % TODO(@anton) do we actually need this here or can we calculate these "analytically"
-                    % TODO(@anton) THIS does not work for MX -- need entierly different implementation!
-                    ind_x1 = [];
-                    ind_x2 = [];
-                    % HERE BE DRAGONS: This is using some casadi internals to deduplicate x1, x2, expressions.
-                    % Get element cell arrays.
-                    x1_elem = x1.elements();
-                    x2_elem = x2.elements();
-                    % Get element hashes.
-                    x1_hashes = cellfun(@(x) x.element_hash(), x1_elem);
-                    x2_hashes = cellfun(@(x) x.element_hash(), x2_elem);
-                    % Get indicies of unique elements by comparing the element hashes.
-                    % WARNING: Technically these hashes may be nonunique but looking at how they are generated this should
-                    %          never practically be the case. If it happens though the symptoms should be obvious.
-                    [~,x1_uniq,x1_uniq_backmap] = unique(x1_hashes, 'stable');
-                    [~,x2_uniq,x2_uniq_backmap] = unique(x2_hashes, 'stable');
-                    % Get indicies with jacobian trick
-                    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1(x1_uniq))});
-                    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2(x2_uniq))});
-                    [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
-                    [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
-                    % Resize indices back into correct size by mapping back the nonunique elements
-                    ind_x1 = ind_x1(x1_uniq_backmap);
-                    ind_x2 = ind_x2(x2_uniq_backmap);
+                    if opts.problem_in_vertical_from 
+                        % Efficient index extraction for vertical form
+                        S1= which_depends(x,x1,1,true);
+                        S2= which_depends(x,x2,1,true);
+                        ind_x1 = find(S1);   % gives column indices of x used in x1
+                        ind_x2 = find(S2);   % gives column indices of x used in x2
+                        ind_nonscalar_x1 = [];
+                        ind_nonscalar_x2 = [];
+                    else
+                        % TODO(@anton) do we actually need this here or can we calculate these "analytically"
+                        % TODO(@anton) THIS does not work for MX -- need entierly different implementation!
+                        ind_x1 = [];
+                        ind_x2 = [];
+                        % HERE BE DRAGONS: This is using some casadi internals to deduplicate x1, x2, expressions.
+                        % Get element cell arrays.
+                        x1_elem = x1.elements();
+                        x2_elem = x2.elements();
+                        % Get element hashes.
+                        x1_hashes = cellfun(@(x) x.element_hash(), x1_elem);
+                        x2_hashes = cellfun(@(x) x.element_hash(), x2_elem);
+                        % Get indicies of unique elements by comparing the element hashes.
+                        % WARNING: Technically these hashes may be nonunique but looking at how they are generated this should
+                        %          never practically be the case. If it happens though the symptoms should be obvious.
+                        [~,x1_uniq,x1_uniq_backmap] = unique(x1_hashes, 'stable');
+                        [~,x2_uniq,x2_uniq_backmap] = unique(x2_hashes, 'stable');
+                        % Get indicies with jacobian trick
+                        ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1(x1_uniq))});
+                        ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2(x2_uniq))});
+                        [ind_x1,~] = find(sparse(ind_x1_fun(zeros(size(x))))==1);
+                        [ind_x2,~] = find(sparse(ind_x2_fun(zeros(size(x))))==1);
+                        % Resize indices back into correct size by mapping back the nonunique elements
+                        ind_x1 = ind_x1(x1_uniq_backmap);
+                        ind_x2 = ind_x2(x2_uniq_backmap);
+                    end
                     opts.nlp_is_mpec = 1; % TODO: check is this still used? (its purpose: if not an mpec, just make single nlp call without mpec machinery);
+                    
                 else
                     opts.nlp_is_mpec = 0;
                     ind_x1 = [];
@@ -1418,7 +1438,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                 M = MX.sym('M', 1);
                 y = MX.sym('y', dims.n_comp); % binary variablkes for comp. constraints
             end
- 
+
             % Big M reformulation of complementarities
             A_lpec_sym = [-x1+M*y; -x2-M*y];
             b_res = [x1;x2-M];
@@ -1496,7 +1516,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     lpec.f = nabla_f_k;
                 end
                 t_lpec_preparation_iter = tic;
-                lpec = create_lpec_subproblem(x_k,p0,rho_TR_k_l,lpec_casadi,dims,opts,opts.tol_active*10); % less conservative active set tol for reduced lpecs (tends to include more biactives) 
+                lpec = create_lpec_subproblem(x_k,p0,rho_TR_k_l,lpec_casadi,dims,opts,opts.tol_active*10); % less conservative active set tol for reduced lpecs (tends to include more biactives)
                 stats.iter.cpu_time_lpec_preparation_iter = [stats.iter.cpu_time_lpec_preparation_iter;toc(t_lpec_preparation_iter)];
 
                 % --------------------------- Inner (minor) itrations ------------------------------------------

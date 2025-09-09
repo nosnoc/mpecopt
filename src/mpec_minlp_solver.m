@@ -47,140 +47,151 @@ end
 % 0 \leq G(x) \perp H(x) \geq 0
 ind_x1 = [];
 ind_x2 = [];
-
-% Lift complemetraties G
-if settings.lift_complementarities_full
-    % full lifting with duplicatse;
-    if strcmp(x_class,'casadi.SX')
-        x1 = SX.sym('x1', n_comp);
-    else
-        x1 = MX.sym('x1', n_comp);
-    end
-
-    lbx = [lbx;0*ones(n_comp,1)];
-    ubx = [ubx;inf*ones(n_comp,1)];
-    x = [x;x1];
-    x_k = [x_k;G_eval];
-
-    g = [g;x1-G];
-    lbg = [lbg;0*ones(n_comp,1)];
-    ubg = [ubg;0*ones(n_comp,1)];
-
-    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
-    [ind_x1,~] = find(sparse(ind_x1_fun(x_k)==1));
-elseif settings.lift_complementarities
-    % lifting with only those that are not scaler
-    [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(G,x);
-    n_lift_x1 = length(ind_nonscalar);
-    if n_lift_x1 == 0
-        try x.jacobian(G_copy);
-        catch
-            n_lift_x1 = length(G_copy);
-            ind_nonscalar = 1:n_lift_x1;
-            ind_scalar = [];
-        end
-    end
-    if n_lift_x1 > 0
-        if strcmp(x_class,'casadi.SX')
-            x1_lift = SX.sym('x1_lift',n_lift_x1);
-        else
-            x1_lift = MX.sym('x1_lift',n_lift_x1);
-        end
-
-        lbx = [lbx;0*ones(n_lift_x1,1)];
-        ubx = [ubx;inf*ones(n_lift_x1 ,1)];
-        x = [x;x1_lift];
-        x_k = [x_k;G_eval(ind_nonscalar)];
-        % x1 = [x(ind_scalar);x1_lift];
-        % ind_x1 = [ind_map;n_primal_non_lifted+1:n_primal_non_lifted+n_lift_x1];
-        % lift
-        g = [g;x1_lift-G(ind_nonscalar)];
-        lbg = [lbg;0*ones(n_lift_x1 ,1)];
-        ubg = [ubg;0*ones(n_lift_x1 ,1)];
-
-        x1 = G_copy;
-        x1(ind_nonscalar) = x1_lift;
-    else
-        x1 = G;
-        % ind_x1 = ind_map;
-    end
+if settings.problem_in_vertical_from
+    x1 = G;
+    x2 = H;
+    % Efficient index extraction for vertical form
+    S1= which_depends(x,x1,1,true);
+    S2= which_depends(x,x2,1,true);
+    ind_x1 = find(S1);   % gives column indices of x used in x1
+    ind_x2 = find(S2);   % gives column indices of x used in x2
+    ind_nonscalar_x1 = [];
+    ind_nonscalar_x2 = [];
 else
-    x1 = G; % (an expression, a nontivial function of x)
-    if settings.update_comp_lower_bounds
-        g = [g;G];
-        lbg = [lbg;0*ones(n_comp,1)];
-        ubg = [ubg; inf*ones(n_comp,1)];
-    end
-end
-
-% Lift complemetraties H
-if settings.lift_complementarities_full
-    % full lifting with duplicatse;
-    if strcmp(x_class,'casadi.SX')
-        x2 = SX.sym('x2', n_comp);
-    else
-        x2 = MX.sym('x2', n_comp);
-    end
-    lbx = [lbx;0*ones(n_comp,1)];
-    ubx = [ubx;inf*ones(n_comp,1)];
-    x = [x;x2];
-    x_k = [x_k;H_eval ];
-
-    g = [g;x2-H];
-    lbg = [lbg;0*ones(n_comp,1)];
-    ubg = [ubg;0*ones(n_comp,1)];
-
-    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
-    [ind_x2,~] = find(sparse(ind_x2_fun(x_k))==1);
-elseif settings.lift_complementarities
-    % lifting with only those that are not scaler
-    [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(H,x);
-    n_lift_x2 = length(ind_nonscalar);
-
-    if n_lift_x2 == 0
-        try x.jacobian(H_copy);
-        catch
-            n_lift_x2 = length(H_copy);
-            ind_nonscalar = 1:n_lift_x2;
-            ind_scalar = [];
-        end
-    end
-    if n_lift_x2 > 0
+    % Lift complemetraties G
+    if settings.lift_complementarities_full
+        % full lifting with duplicatse;
         if strcmp(x_class,'casadi.SX')
-            x2_lift = SX.sym('x2_lift',n_lift_x2);
+            x1 = SX.sym('x1', n_comp);
         else
-            x2_lift = MX.sym('x2_lift',n_lift_x2);
+            x1 = MX.sym('x1', n_comp);
         end
-        lbx = [lbx;0*ones(n_lift_x2,1)];
-        ubx = [ubx;inf*ones(n_lift_x2 ,1)];
-        x = [x;x2_lift];
-        x_k = [x_k;H_eval(ind_nonscalar)];
-        % ind_x2 = [ind_map;n_primal_non_lifted+n_lift_x1+1:n_primal_non_lifted+n_lift_x1+n_lift_x2];
-        % lift
-        g = [g;x2_lift-H(ind_nonscalar)];
-        lbg = [lbg;0*ones(n_lift_x2 ,1)];
-        ubg = [ubg;0*ones(n_lift_x2 ,1)];
 
-        x2 = H_copy;
-        x2(ind_nonscalar) = x2_lift;
-    else
-        x2 = H;
-        % ind_x2 = ind_map;
-    end
-else
-    x2 = H; % (an expression, a nontivial function of x)
-    if settings.update_comp_lower_bounds
-        g = [g;H];
+        lbx = [lbx;0*ones(n_comp,1)];
+        ubx = [ubx;inf*ones(n_comp,1)];
+        x = [x;x1];
+        x_k = [x_k;G_eval];
+
+        g = [g;x1-G];
         lbg = [lbg;0*ones(n_comp,1)];
-        ubg = [ubg; inf*ones(n_comp,1)];
-    end
-end
+        ubg = [ubg;0*ones(n_comp,1)];
 
-if settings.lift_complementarities_full || settings.lift_complementarities
-    ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
-    [ind_x1,~] = find(sparse(ind_x1_fun(x_k)==1));
-    ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
-    [ind_x2,~] = find(sparse(ind_x2_fun(x_k))==1);
+        ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+        [ind_x1,~] = find(sparse(ind_x1_fun(x_k)==1));
+    elseif settings.lift_complementarities
+        % lifting with only those that are not scaler
+        [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(G,x);
+        n_lift_x1 = length(ind_nonscalar);
+        if n_lift_x1 == 0
+            try x.jacobian(G_copy);
+            catch
+                n_lift_x1 = length(G_copy);
+                ind_nonscalar = 1:n_lift_x1;
+                ind_scalar = [];
+            end
+        end
+        if n_lift_x1 > 0
+            if strcmp(x_class,'casadi.SX')
+                x1_lift = SX.sym('x1_lift',n_lift_x1);
+            else
+                x1_lift = MX.sym('x1_lift',n_lift_x1);
+            end
+
+            lbx = [lbx;0*ones(n_lift_x1,1)];
+            ubx = [ubx;inf*ones(n_lift_x1 ,1)];
+            x = [x;x1_lift];
+            x_k = [x_k;G_eval(ind_nonscalar)];
+            % x1 = [x(ind_scalar);x1_lift];
+            % ind_x1 = [ind_map;n_primal_non_lifted+1:n_primal_non_lifted+n_lift_x1];
+            % lift
+            g = [g;x1_lift-G(ind_nonscalar)];
+            lbg = [lbg;0*ones(n_lift_x1 ,1)];
+            ubg = [ubg;0*ones(n_lift_x1 ,1)];
+
+            x1 = G_copy;
+            x1(ind_nonscalar) = x1_lift;
+        else
+            x1 = G;
+            % ind_x1 = ind_map;
+        end
+    else
+        x1 = G; % (an expression, a nontivial function of x)
+        if settings.update_comp_lower_bounds
+            g = [g;G];
+            lbg = [lbg;0*ones(n_comp,1)];
+            ubg = [ubg; inf*ones(n_comp,1)];
+        end
+    end
+
+    % Lift complemetraties H
+    if settings.lift_complementarities_full
+        % full lifting with duplicatse;
+        if strcmp(x_class,'casadi.SX')
+            x2 = SX.sym('x2', n_comp);
+        else
+            x2 = MX.sym('x2', n_comp);
+        end
+        lbx = [lbx;0*ones(n_comp,1)];
+        ubx = [ubx;inf*ones(n_comp,1)];
+        x = [x;x2];
+        x_k = [x_k;H_eval ];
+
+        g = [g;x2-H];
+        lbg = [lbg;0*ones(n_comp,1)];
+        ubg = [ubg;0*ones(n_comp,1)];
+
+        ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
+        [ind_x2,~] = find(sparse(ind_x2_fun(x_k))==1);
+    elseif settings.lift_complementarities
+        % lifting with only those that are not scaler
+        [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(H,x);
+        n_lift_x2 = length(ind_nonscalar);
+
+        if n_lift_x2 == 0
+            try x.jacobian(H_copy);
+            catch
+                n_lift_x2 = length(H_copy);
+                ind_nonscalar = 1:n_lift_x2;
+                ind_scalar = [];
+            end
+        end
+        if n_lift_x2 > 0
+            if strcmp(x_class,'casadi.SX')
+                x2_lift = SX.sym('x2_lift',n_lift_x2);
+            else
+                x2_lift = MX.sym('x2_lift',n_lift_x2);
+            end
+            lbx = [lbx;0*ones(n_lift_x2,1)];
+            ubx = [ubx;inf*ones(n_lift_x2 ,1)];
+            x = [x;x2_lift];
+            x_k = [x_k;H_eval(ind_nonscalar)];
+            % ind_x2 = [ind_map;n_primal_non_lifted+n_lift_x1+1:n_primal_non_lifted+n_lift_x1+n_lift_x2];
+            % lift
+            g = [g;x2_lift-H(ind_nonscalar)];
+            lbg = [lbg;0*ones(n_lift_x2 ,1)];
+            ubg = [ubg;0*ones(n_lift_x2 ,1)];
+
+            x2 = H_copy;
+            x2(ind_nonscalar) = x2_lift;
+        else
+            x2 = H;
+            % ind_x2 = ind_map;
+        end
+    else
+        x2 = H; % (an expression, a nontivial function of x)
+        if settings.update_comp_lower_bounds
+            g = [g;H];
+            lbg = [lbg;0*ones(n_comp,1)];
+            ubg = [ubg; inf*ones(n_comp,1)];
+        end
+    end
+
+    if settings.lift_complementarities_full || settings.lift_complementarities
+        ind_x1_fun = Function('ind_1',{x},{x.jacobian(x1)});
+        [ind_x1,~] = find(sparse(ind_x1_fun(x_k)==1));
+        ind_x2_fun = Function('ind_2',{x},{x.jacobian(x2)});
+        [ind_x2,~] = find(sparse(ind_x2_fun(x_k))==1);
+    end
 end
 % update lb on x1 and x2
 if settings.update_comp_lower_bounds

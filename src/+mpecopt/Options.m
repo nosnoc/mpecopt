@@ -7,6 +7,7 @@ classdef Options < handle
         casadi_symbolic_mode {mustBeMember(casadi_symbolic_mode,{'casadi.SX', 'casadi.MX'})} = 'casadi.SX';
         comp_res_bilinear (1,1) logical = true;  % If true: comp_res = max(x1.*x2), if false: comp_res = max(min(x1,x2)); the bilinear shrinks faster, e.g. x1 = 1e-3,x2 = 1e-3, bilinear = 1e-6, std 1e-3;
         lift_complementarities_full (1,1) logical = false; % If true brute force lifting x1-G = 0, if false, detect which components of G are already purely scalar. Affine expressions get lifted.
+        problem_in_vertical_from (1,1) logical = false; % If true, it is assumed that complementarity constraints are given as 0 \leq x_1 \perp x_2 \geq 0, and automatic formulation is skipeed.
 
         %  --- Stopping criteria/tolernaces ---
         max_iter (1,1) double {mustBeInteger, mustBePositive} = 25;

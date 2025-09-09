@@ -24,11 +24,11 @@ max_mult = max(norm([eta_x1_biactive;eta_x2_biactive],inf), 1e-12);
 eta_x1_biactive = eta_x1_biactive./max_mult; 
 eta_x2_biactive = eta_x2_biactive./max_mult; 
 
-if max_mult > 1e3
-    tol_M = 1e-3;
-else
-    tol_M = settings.tol_B_stationarity*10;
-end
+% if max_mult > 1e3
+%     tol_M = 1e-3;
+% else
+tol_M = settings.tol_B_stationarity*10;
+% end
 
 
 % R
