@@ -32,10 +32,10 @@ settings.objective_functions = {'Quadratic_psd','Quadratic_ind',...
     };
 
 
-settings.objective_functions = {'Edensch'};
+settings.objective_functions = {'EG2'};
 
 
-settings.objective_functions 
+
 
 settings.rescale_factor = 1;
 settings.round_all_data = 1;
@@ -52,6 +52,8 @@ settings.s_density_M = 0.5;
 settings.s_density_A_B = 0.05; % all same or change
 settings.s_density_M = 0.1;
 
+
+settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.05];
 settings.random_problem_sizes = 1;
@@ -62,8 +64,8 @@ settings.n_ineq_lb = 0.5;
 settings.n_fraction_of_x = 0.5;
 
 dimensions.N_rand_prob = 1; % number of problems per objective
-dimensions.n_x_max = 1500;
-dimensions.n_x_min = 100;
+dimensions.n_x_max = 700;
+dimensions.n_x_min = 700;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 mpecs = generate_nonlinear_mpec_problem_set(problem_set_name,settings,dimensions);

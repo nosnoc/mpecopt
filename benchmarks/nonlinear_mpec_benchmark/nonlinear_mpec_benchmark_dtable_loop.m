@@ -87,6 +87,7 @@ for ii = N_experiments
 
         mpec_struct = struct('x',w,'f',f,'g',g,'G',G,'H',H);
         solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg,'ubg',ubg);
+        fprintf(['Current problem solution started at: ' datestr(now) '.\n'])
         % to add non-mpecsol solver you can add ifs here
         if isequal(solver_functions{ii},@mpec_optimizer)
             solver = mpecopt.Solver(mpec_struct, options);
@@ -94,6 +95,7 @@ for ii = N_experiments
         else
             [result,stats] = solver_functions{ii}(mpec_struct,solver_initalization,options);
         end
+        fprintf(['Current problem solution ended at: ' datestr(now) '.\n'])
 
         % if stats.success~=1
         %     keyboard;
@@ -152,6 +154,7 @@ for ii = N_experiments
         dstruct.multiplier_based_stationarity  = [dstruct.multiplier_based_stationarity; stats.multiplier_based_stationarity];
         % j = j+1;
         total_success = total_success+stats.success;
+        
         fprintf(['success rate so far (%d of %d) or %2.2f precent \n\n'],total_success,jj,100*total_success/jj);
         jj = jj+1;
 

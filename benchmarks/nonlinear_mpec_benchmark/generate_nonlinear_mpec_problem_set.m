@@ -113,6 +113,9 @@ else
 end
 
 fprintf('Largerst problem: n_var = %d, n_comp = %d \n',max(n_x_vec+2*n_y_vec), max(n_y_vec))
+n_comp_max = max(n_y_vec);
+n_comp_min = 1000; % after this trashold addaptiv bound used
+
 % range for feasible points
 range_x = [0,1];
 range_y = [0,1];
@@ -127,6 +130,14 @@ if ~isfield(settings,'range_s_density')
 else
     range_s_density = settings.range_s_density;
 end
+
+
+if ~isfield(settings,'adaptive_density_bounds')
+    adaptive_density_bounds = 0;
+else
+    adaptive_density_bounds = settings.adaptive_density_bounds;
+end
+
 range_A = [0,2]./rescale_factor; % uniform
 range_B = [0,2]./rescale_factor; % uniform
 % range_A = [-1,1]./rescale_factor; % uniform
@@ -191,7 +202,36 @@ for kk = 1:length(objective_functions)
         f = alpha_lin*f_lin;
 
         if settings.variable_density
-            s_density_A_B = range_s_density(1)+(range_s_density(2)-range_s_density(1)).*rand(1);
+            % Addaptive bounds on the densitiy, as for very larg problems less sparse problems can take hours to create an expression.
+            % graph
+            if adaptive_density_bounds
+                % for < 1000 keep fixed, for larger shrink linearly lower and upper bounds
+                % range_s_density_lb = max(0.0025, min(range_s_density(1), range_s_density(1) - (n_comp-n_comp_min)*(0.0075/(n_comp_max-n_comp_min))));
+                % range_s_density_ub = max(0.005,  min(range_s_density(2), range_s_density(2) - (n_comp-n_comp_min)*(0.045/(n_comp_max-n_comp_min))));
+                if n_comp <= n_comp_min
+                    % Below minimum: use original range_s_density bounds
+                    range_s_density_lb = range_s_density(1);
+                    range_s_density_ub = range_s_density(2);
+
+                elseif n_comp >= n_comp_max
+                    % At or above maximum: use target bounds
+                    range_s_density_lb = 0.0025;
+                    range_s_density_ub = 0.005;
+                else
+                    % Between min and max: linear interpolation
+                    % Calculate interpolation factor (0 at n_comp_min, 1 at n_comp_max)
+                    alpha = (n_comp - n_comp_min) / (n_comp_max - n_comp_min);
+
+                    % Interpolate: shrink from original wide bounds to tighter target bounds
+                    range_s_density_lb = range_s_density(1) + alpha * (0.0025 - range_s_density(1));
+                    range_s_density_ub = range_s_density(2) + alpha * (0.005 - range_s_density(2));
+                end
+                s_density_A_B = range_s_density_lb +(range_s_density_ub-range_s_density_lb).*rand(1);
+            else
+                range_s_density_lb = range_s_density(1);
+                range_s_density_ub = range_s_density(2);
+                s_density_A_B = range_s_density_lb +(range_s_density_ub-range_s_density_lb).*rand(1);
+            end
         end
 
         switch objective_type
@@ -497,7 +537,8 @@ for kk = 1:length(objective_functions)
         r = round(1+(n_y-1)*rand(1)); % pick number between
         % s_density_M = (n_non_zero_E-n_y)/n_y^2;
         if settings.variable_density
-            s_density_M = range_s_density(1)+(range_s_density(2)-range_s_density(1)).*rand(1);
+            % s_density_M = range_s_density(1)+(range_s_density(2)-range_s_density(1)).*rand(1);
+            s_density_M = range_s_density_lb +(range_s_density_ub-range_s_density_lb).*rand(1);
         else
             s_density_M = settings.s_density_M;
         end
