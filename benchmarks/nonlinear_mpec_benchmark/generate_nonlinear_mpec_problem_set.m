@@ -123,7 +123,7 @@ range_d = [1, 3]./rescale_factor;
 
 % range for problem matrices
 if ~isfield(settings,'range_s_density')
-    range_s_density = [0.1 0.8];
+    range_s_density = [0.01 0.1];
 else
     range_s_density = settings.range_s_density;
 end
