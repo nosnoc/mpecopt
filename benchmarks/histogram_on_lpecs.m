@@ -1,5 +1,6 @@
 %% Evaluating LPEC MILP efficiency:
 close all; clc;
+latexify_plot()
 % dtable;
 % lpec_dstruct;
 
@@ -63,21 +64,33 @@ else
 end
 end
 
-% ------------------------
+%%
+%------------------------
 % Nodecount statistics (for each lpec call seperatalyover solver calls)
 % ------------------------
 nc_i  = cell2mat(process_cells(lpec_dstruct.nodecount_phase_i(idx)));
 nc_ii = cell2mat(process_cells(lpec_dstruct.nodecount_phase_ii(idx)));
 nc_tot = [nc_i, nc_ii];
 
+log_plot = true;
 figure;
 
 % --- Phase I ---
 subplot(1,2,1)
-h1 = histogram(nc_i, 'BinMethod', 'integers');
+if log_plot 
+    h1 = histogram(log2(nc_i), 'BinMethod', 'integers');
+    min_pow = floor(min(log2(nc_i)));
+    max_pow = ceil(max(log2(nc_i)));
+    set(gca, 'XTick', min_pow:max_pow)
+    set(gca, 'XTickLabel', arrayfun(@(x) sprintf('$2^{%g}$', x), min_pow:max_pow, 'UniformOutput', false))
+else
+       h1 = histogram(nc_i, 'BinMethod', 'integers');
+end
+
+% Set ticks manually based on your data range
 title('Nodecount Phase I - each LPEC call');
 xlabel('Nodes'); ylabel('Frequency'); grid on;
-
+xticks = get(gca, 'XTick');
 % annotate counts
 for k = 1:numel(h1.BinEdges)-1
     if h1.Values(k) > 0
@@ -86,21 +99,32 @@ for k = 1:numel(h1.BinEdges)-1
         text(x, y, num2str(y), 'HorizontalAlignment','center','VerticalAlignment','bottom');
     end
 end
-
 % adjust ylim
 ymax1 = max(h1.Values);
 ylim([0 ymax1 + max(2,ceil(0.2*ymax1))])
 
 % --- Phase II ---
 subplot(1,2,2)
-h2 = histogram(nc_ii, 'BinMethod', 'integers');
-title('Nodecount Phase II - each LPEC call');
-xlabel('Nodes'); ylabel('Frequency'); grid on;
-
-% enforce nicer axis if only one bar
+if log_plot 
+    h2 = histogram(log2(nc_ii), 'BinMethod', 'integers');
+    % min_pow = floor(min(log2(nc_ii)));
+    % max_pow = ceil(max(log2(nc_ii)));
+    set(gca, 'XTick', min_pow:max_pow)
+    set(gca, 'XTickLabel', arrayfun(@(x) sprintf('$2^{%g}$', x), min_pow:max_pow, 'UniformOutput', false))
+    % enforce nicer axis if only one bar
+    if numel(unique(nc_ii)) == 1
+            xlim([-1 max_pow]);
+    end
+else
+    h2 = histogram(nc_ii, 'BinMethod', 'integers');
+    % enforce nicer axis if only one bar
 if numel(unique(nc_ii)) == 1
     xlim([0 10])
 end
+end
+title('Nodecount Phase II - each LPEC call');
+xlabel('Nodes'); ylabel('Frequency'); grid on;
+
 
 % annotate counts
 for k = 1:numel(h2.BinEdges)-1
@@ -115,7 +139,7 @@ end
 ymax2 = max(h2.Values);
 ylim([0 ymax2 + max(2,ceil(0.2*ymax2))])
 
-
+%%
 % xticks(min(nc_ii):max(nc_ii));
 
 % subplot(133)
