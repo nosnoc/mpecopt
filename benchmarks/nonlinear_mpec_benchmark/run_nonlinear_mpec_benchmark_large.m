@@ -53,10 +53,6 @@ settings.objective_functions = {'Quadratic_psd',...
     };
 
 
-
-settings.objective_functions = {'NCVXQP6','DIXCHLNV',...
-    };
-
 settings.rescale_factor = 1;
 settings.round_all_data = 1;
 settings.n_digits = 4;
@@ -73,6 +69,9 @@ settings.s_density_A_B = 0.05; % all same or change
 settings.s_density_M = 0.1;
 
 
+settings.nnz_bounded_by_dim = 1;
+settings.inv_cond_num = 1e-2;
+
 settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.05];
@@ -84,12 +83,12 @@ settings.n_ineq_lb = 0.5;
 
 % Problem size 
 dimensions.N_rand_prob = 3; % number of problems per objective
-dimensions.n_x_max = 1100;
+dimensions.n_x_max = 1250;
 dimensions.n_x_min = 100;
 
-dimensions.N_rand_prob = 1; % number of problems per objective
-dimensions.n_x_max = 50;
-dimensions.n_x_min = 40;
+% dimensions.N_rand_prob = 1; % number of problems per objective
+% dimensions.n_x_max = 50;
+% dimensions.n_x_min = 20;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 
@@ -178,6 +177,7 @@ opts = {opts1, opts2, opts3, ...
 
 %% Create data struct
 N_experiments = [3 4 5 1 2 6 7];
+% N_experiments = [3 4];
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot
 dtable = dtable1;
@@ -214,7 +214,7 @@ plot_settings.lpecs_solved = 0;
 plot_settings.active_set_changes = 0;
 plot_settings.lpecs_cpu_time = 0;
 plot_settings.bar_timing_plots = 0;
-plot_settings.nlps_solved = 1;
+plot_settings.nlps_solved = 0;
 plot_settings.max_nlp_cpu_time = 0;
 plot_settings.max_nlp_cpu_time_phase_i = 0;
 plot_settings.max_nlp_cpu_time_phase_ii = 0;
@@ -242,8 +242,8 @@ plot_settings.nlp_phases_cpu_time = 0;
 plot_settings.lpec_phases_cpu_time = 0;
 
 plot_settings.max_lpec_cpu_time = 0;
-plot_settings.stationary_points = 1;
-plot_settings.b_stationarity = 1;
+plot_settings.stationary_points = 0;
+plot_settings.b_stationarity = 0;
 plot_settings.b_stationarty_as_success_criterion = 0;
 plot_settings.plot_only_sucessful = 1;
 plot_settings.bar_comparisson_plots = 0;

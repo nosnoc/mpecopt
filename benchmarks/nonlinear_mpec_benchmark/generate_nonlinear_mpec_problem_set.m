@@ -43,6 +43,17 @@ unfold_struct(settings,'caller')
 unfold_struct(dimensions,'caller')
 
 
+if ~isfield(settings,'nnz_bounded_by_dim')
+    nnz_bounded_by_dim = false;
+    
+end
+
+if ~isfield(settings,'inv_cond_num')
+    inv_cond_num = 1e-4;
+    
+end
+nnz_factor = 1;
+
 if ~isfield(settings,'casadi_variable_type')
     casadi_variable_type = 'SX'; % default;
 else
@@ -251,7 +262,11 @@ for kk = 1:length(objective_functions)
                 % Quadratic
                 % ... generate sparse Hessian matrix H (and make sure it it psd if needed)
                 % Quadratic
-                H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing
+                if settings.nnz_bounded_by_dim 
+                    H  = full( sprandsym(n_obj, n_obj/n_obj.^2,inv_cond_num) );               % ... full matrix for easier printing
+                else
+                    H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing    
+                end
                 H  = round( H , n_digits_data);                        % ... round matrix to nDigits
                 min_eig = max( 0, -min( eig( H ) - eps_prec) );  % ... -epsPrec to ensure H is p.s.d.
                 H = H + 2*round( min_eig*eye(n_obj), n_digits);     % ... make trailing matrix p.s.d.
@@ -259,7 +274,11 @@ for kk = 1:length(objective_functions)
                 f = 0.5*w(1:n_obj)'*H*w(1:n_obj)+grad_vec'*w(1:n_obj);
                 % f = 0.5*v'*H*v+grad_vec'*w(1:n_obj); % +[c;d]'*v;
             case 'Quadratic_ind'
-                H  = full( sprandsym(n_obj, s_density_A_B) );
+                if settings.nnz_bounded_by_dim
+                    H  = full( sprandsym(n_obj, n_obj/n_obj.^2,inv_cond_num) );               % ... full matrix for easier printing
+                else
+                    H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing    
+                end
                 H  = round( H , n_digits_data);
                 grad_vec  = round( range_grad(1) + rand(n_obj,1) * (range_grad(2) - range_grad(1)) , n_digits );
                 f = 0.5*w(1:n_obj)'*H*w(1:n_obj)+grad_vec'*w(1:n_obj);
@@ -267,7 +286,7 @@ for kk = 1:length(objective_functions)
                 % f = 0.5*v'*H*v+grad_vec'*v; % +[c;d]'*v;
             case 'Fletcher'
                 for i = 1:n_obj-1
-                    f = f+100*(w(i+1)-w(i)+1-w(i)^2)^2;
+                    f = f+(w(i+1)-w(i)+1-w(i)^2)^2;
                 end
             case 'Himmelblau'
                 for i = floor(n_obj/2)
@@ -525,14 +544,24 @@ for kk = 1:length(objective_functions)
                 %     end
         end
 
+        f = f*1e-3; % alliviate bad scaling
+
         % Generate problem matrices
         if settings.inequality_constraints
             % Ax + By >= f
-            A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A_B);
+            if settings.nnz_bounded_by_dim 
+                A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,nnz_factor*n_ineq/(n_x*n_ineq),inv_cond_num);
+            else
+                A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A_B);
+            end
             A(A~=0) = range_A(1)+A(A~=0);
             A = round(A,n_digits_data);
             if settings.inequality_constraints_coupling_terms
-                B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,s_density_A_B);
+                if settings.nnz_bounded_by_dim 
+                    B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,nnz_factor*n_ineq/(n_y*n_ineq),inv_cond_num);
+                else
+                    B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,s_density_A_B);
+                end
                 B(B~=0) = range_B(1)+B(B~=0);
                 B = round(B,n_digits_data);
             else
@@ -541,6 +570,9 @@ for kk = 1:length(objective_functions)
         end
 
         r = round(1+(n_y-1)*rand(1)); % pick number between
+        if r == n_y
+            r = r-1;
+        end
         % s_density_M = (n_non_zero_E-n_y)/n_y^2;
         if settings.variable_density
             % s_density_M = range_s_density(1)+(range_s_density(2)-range_s_density(1)).*rand(1);
@@ -551,7 +583,17 @@ for kk = 1:length(objective_functions)
         % s_density_M = settings.s_density_M;
 
         s_density_M = min(s_density_M, n_non_zero_E/(r*(n_y-r))); % given desnity but not more than 2000 nnz
-        E = (range_E(2)-range_E(1))*sprand(r,n_y-r,s_density_M);
+                if settings.nnz_bounded_by_dim 
+                        % try
+                            E = (range_E(2)-range_E(1))*sprand(r,n_y-r,n_non_zero_E/(r*(n_y-r)),inv_cond_num);
+                        % catch
+                        %     keyboard;
+                        % end
+
+                else
+                        E = (range_E(2)-range_E(1))*sprand(r,n_y-r,s_density_M);
+                end
+        
         E(E~=0) = range_E(1)+E(E~=0);
 
 
@@ -575,7 +617,11 @@ for kk = 1:length(objective_functions)
 
         % N = sprand(n_y,n_x,s_density);
         % r = a + (b-a).*rand(100,1);
-        N = (range_N(2)-range_N(1))*sprand(n_y,n_x,s_density_A_B);
+        if settings.nnz_bounded_by_dim 
+            N = (range_N(2)-range_N(1))*sprand(n_y,n_x,nnz_factor*n_y/(n_x*n_y),inv_cond_num);
+        else
+            N = (range_N(2)-range_N(1))*sprand(n_y,n_x,s_density_A_B);
+        end
         N(N~=0) = range_N(1)+N(N~=0);
         N = round(N,n_digits_data);
 

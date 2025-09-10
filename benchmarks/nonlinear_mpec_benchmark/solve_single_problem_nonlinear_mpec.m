@@ -16,7 +16,7 @@ settings.inequality_constraints = 1;
 settings.inequality_constraints_coupling_terms = 1; % if 0, then in Ax+By >=f, B = 0;
 
 % Trigonometric
-settings.objective_functions = {'Quadratic_psd','Quadratic_ind',... 
+settings.objective_functions_all = {'Quadratic_psd','Quadratic_ind',... 
     'Fletcher','Himmelblau','McCormick',...
     'Powell','Rosenbrock',...
     'Raydan1','Raydan2',...
@@ -32,7 +32,7 @@ settings.objective_functions = {'Quadratic_psd','Quadratic_ind',...
     };
 
 
-settings.objective_functions = {'EG2'};
+settings.objective_functions = {settings.objective_functions_all{15}};
 
 
 settings.rescale_factor = 1;
@@ -51,6 +51,9 @@ settings.s_density_A_B = 0.05; % all same or change
 settings.s_density_M = 0.1;
 
 
+settings.nnz_bounded_by_dim = 1;
+settings.inv_cond_num = 1e-2;
+
 settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.05];
@@ -62,15 +65,17 @@ settings.n_ineq_lb = 0.5;
 settings.n_fraction_of_x = 0.5;
 
 dimensions.N_rand_prob = 1; % number of problems per objective
-dimensions.n_x_max = 1200;
-dimensions.n_x_min = 1200;
+dimensions.n_x_max = 1500;
+dimensions.n_x_min = 1500;
+
+
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 mpecs = generate_nonlinear_mpec_problem_set(problem_set_name,settings,dimensions);
 length(mpecs)
 
 %% mpecopt solvers
-ii_prob = 1; % 10    41    48     85    87
+ii_prob = 1;
 close all;
 
 mpec = mpecs(ii_prob);
@@ -91,7 +96,7 @@ fprintf('Problem info:name = %s, n_w = %d, n_g = %d, n_comp = %d\n',mpec_name, l
 mpec_struct = struct('x',w,'f',f,'g',g,'G',G,'H',H);
 solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg,'ubg',ubg);
 %% Homotopy solver
-% settings_homotopy = HomotopySolverOptions();
+settings_homotopy = HomotopySolverOptions();
 % settings_homotopy.homotopy_parameter_steering = "Direct";
 % [result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
 % f_opt_homotopy = full(result_homotopy.f);
@@ -109,11 +114,13 @@ solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
 solver_settings.settings_lpec.lpec_solver = 'Gurobi';
 solver_settings.use_one_nlp_solver = true;
 solver_settings.problem_in_vertical_from = true;
-
+solver_settings.settings_casadi_nlp.ipopt.print_level = 5;
+% solver_settings.settings_casadi_nlp.ipopt.max_iter = 100;
+% solver_settings.settings_casadi_nlp.jit = true;
 % solver_settings.rho_TR_phase_i_init = 10;
 
 tic
-solver = mpecopt.Solver(mpec, solver_settings);
+solver = mpecopt.Solver(mpec_struct, solver_settings);
 toc
 %%
 [result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);
