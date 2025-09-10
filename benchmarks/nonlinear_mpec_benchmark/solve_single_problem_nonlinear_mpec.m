@@ -35,8 +35,6 @@ settings.objective_functions = {'Quadratic_psd','Quadratic_ind',...
 settings.objective_functions = {'EG2'};
 
 
-
-
 settings.rescale_factor = 1;
 settings.round_all_data = 1;
 settings.n_digits = 4;
@@ -64,8 +62,8 @@ settings.n_ineq_lb = 0.5;
 settings.n_fraction_of_x = 0.5;
 
 dimensions.N_rand_prob = 1; % number of problems per objective
-dimensions.n_x_max = 700;
-dimensions.n_x_min = 700;
+dimensions.n_x_max = 1200;
+dimensions.n_x_min = 1200;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 mpecs = generate_nonlinear_mpec_problem_set(problem_set_name,settings,dimensions);
@@ -110,7 +108,8 @@ solver_settings = mpecopt.Options();
 solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
 solver_settings.settings_lpec.lpec_solver = 'Gurobi';
 solver_settings.use_one_nlp_solver = true;
-solver_settings.problem_in_vertical_from = false;
+solver_settings.problem_in_vertical_from = true;
+
 % solver_settings.rho_TR_phase_i_init = 10;
 
 tic

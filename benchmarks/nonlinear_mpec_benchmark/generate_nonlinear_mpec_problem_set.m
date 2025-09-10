@@ -65,7 +65,13 @@ if settings.random_problem_sizes
     latexify_plot();
     N_problems = N_objectives*N_rand_prob;
     n_x_max = max(N_problems+n_x_min,n_x_max);
-    n_x_vec = n_x_min+randperm(n_x_max-n_x_min,N_problems); % num of non comp vars
+    % n_x_vec = n_x_min+randperm(n_x_max-n_x_min,N_problems); % num of non comp vars
+    % Create a weighted distribution favoring smaller values
+    weights = linspace(5, 1, n_x_max-n_x_min+1);  % Higher weights for smaller indices
+    weights = weights / sum(weights);  % Normalize
+    % Generate biased random indices
+    biased_indices = randsample(1:(n_x_max-n_x_min+1), N_problems, true, weights);
+    n_x_vec = n_x_min + biased_indices - 1;
     n_y_vec = round(n_x_vec/n_fraction_of_x); % num of comp vars
     n_ineq_vec = round((settings.n_ineq_lb+(settings.n_ineq_ub-settings.n_ineq_lb)*(rand(1,N_problems)).*n_x_vec));
     % n_ineq_vec = round((settings.n_ineq_lb+(settings.n_ineq_ub-settings.n_ineq_lb)*(rand(1,N_problems)).*n_x_vec))*3;
@@ -544,9 +550,10 @@ for kk = 1:length(objective_functions)
         end
         % s_density_M = settings.s_density_M;
 
-
+        s_density_M = min(s_density_M, n_non_zero_E/(r*(n_y-r))); % given desnity but not more than 2000 nnz
         E = (range_E(2)-range_E(1))*sprand(r,n_y-r,s_density_M);
         E(E~=0) = range_E(1)+E(E~=0);
+
 
         d1 = range_d1(1)+(range_d1(2)-range_d1(1)).*rand(r,1);
         d2 = range_d2(1)+(range_d2(2)-range_d2(1)).*rand(n_y-r,1);
@@ -554,7 +561,7 @@ for kk = 1:length(objective_functions)
         D2 = diag(d2);
         if settings.symmetric_psd_M_matrix
             M = [D1 E;...
-                E' D2];
+                -E' D2];
             [V,D] = eig(full(M));
             M = V*abs(D)*V';
         else

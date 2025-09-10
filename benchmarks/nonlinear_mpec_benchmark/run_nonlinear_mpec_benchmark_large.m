@@ -48,8 +48,13 @@ settings.objective_functions = {'Quadratic_psd',...
     'EG2','Edensch','Indef',...
     'Cube','Bdexp','Genhumps',...
     'Arwhead', 'Quartc', 'Cosine',...
-    'CURLY20',...
+    'CURLY20','SCURLY30',...
     'NCVXQP6','DIXCHLNV',...
+    };
+
+
+
+settings.objective_functions = {'NCVXQP6','DIXCHLNV',...
     };
 
 settings.rescale_factor = 1;
@@ -70,20 +75,17 @@ settings.s_density_M = 0.1;
 
 settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.variable_density = 1;
-settings.range_s_density = [0.01 0.05]*3;
+settings.range_s_density = [0.01 0.05];
 settings.random_problem_sizes = 1;
-
 
 
 settings.n_ineq_ub = 2; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
 settings.n_ineq_lb = 0.5;
 
 % Problem size 
-
 dimensions.N_rand_prob = 3; % number of problems per objective
-dimensions.n_x_max = 1600;
+dimensions.n_x_max = 1100;
 dimensions.n_x_min = 100;
-
 
 dimensions.N_rand_prob = 1; % number of problems per objective
 dimensions.n_x_max = 50;
@@ -115,6 +117,7 @@ opts1.settings_lpec.lpec_solver = "Gurobi";
 opts1.relax_and_project_homotopy_parameter_steering = "Direct";
 opts1.use_one_nlp_solver = true;
 opts1.problem_in_vertical_from = true;
+opts1.settings_casadi_nlp.ipopt.max_wall_time = 900;
 % opts1.initialization_strategy = "FeasibilityEll1General";
 
 
@@ -124,6 +127,7 @@ opts2.settings_lpec.lpec_solver = "Gurobi";
 opts2.relax_and_project_homotopy_parameter_steering = "Ell_1";
 opts2.use_one_nlp_solver = true;
 opts2.problem_in_vertical_from = true;
+opts2.settings_casadi_nlp.ipopt.max_wall_time = 900;
 % opts2.settings_lpec.stop_lpec_at_feasible = true;
 % opts2.rho_TR_phase_i_init = 1e-3;
 
@@ -143,39 +147,37 @@ opts3.settings_lpec.stop_lpec_at_feasible = true;
 opts3.settings_lpec.stop_lpec_at_descent = true;
 opts3.consider_all_complementarities_in_lpec = false;
 opts3.problem_in_vertical_from = true;
-
+opts3.settings_casadi_nlp.ipopt.max_wall_time = 900;
 
 scholtes_opts1 = HomotopySolverOptions();
 scholtes_opts1.homotopy_parameter_steering = 'Direct';
 scholtes_opts1.problem_in_vertical_from = true;
-
+scholtes_opts1.settings_casadi_nlp.ipopt.max_wall_time = 900;
 
 scholtes_opts2 = HomotopySolverOptions();
 scholtes_opts2.homotopy_parameter_steering = 'Direct';
 scholtes_opts2.max_iter = 1;
 scholtes_opts2.sigma0 = 0;
 scholtes_opts2.problem_in_vertical_from = true;
+scholtes_opts2.settings_casadi_nlp.ipopt.max_wall_time = 1800;
 
 
 scholtes_opts3 = HomotopySolverOptions();
 scholtes_opts3.homotopy_parameter_steering = 'Ell_1';
 scholtes_opts3.problem_in_vertical_from = true;
+scholtes_opts3.settings_casadi_nlp.ipopt.max_wall_time = 900;
 
 
 minlp_opts = MINLPSolverOptions();
-minlp_opts.settings_casadi_nlp.bonmin.time_limit = 900;
+minlp_opts.settings_casadi_nlp.bonmin.time_limit = 1800;
 scholtes_opts3.problem_in_vertical_from = true;
 
 opts = {opts1, opts2, opts3, ...
        scholtes_opts1, scholtes_opts2, scholtes_opts3,...
        minlp_opts}; % list of options to pass to mpecsol (option structs)
 
-
-
 %% Create data struct
-N_experiments = [1 4 5 3 2 6 7];
-N_experiments = [1 ];
-
+N_experiments = [3 4 5 1 2 6 7];
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot
 dtable = dtable1;
