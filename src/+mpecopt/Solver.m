@@ -1575,13 +1575,14 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                             bnlp_solved = true; % from phase 1
                         end
                         % if (h_total_k <= opts.tol) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
-                        if bnlp_solved && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
+                        if ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity || norm(nabla_f_k) <= opts.tol_B_stationarity))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
                             if opts.reset_lpec_objective
                                 d_lpec_k_l = d_lpec_k_l*0; % if the current point is feasible, and the objective is zero, then d = 0 is also a solution of the lpec (occurs if a solution is not on the verties of the lp)
                                 f_lin_opt_k_l = 0;
                             end
                         end
-                        if norm(d_lpec_k_l) <= opts.tol_B_stationarity
+                        % check B-stat if BNLP and LPEC where solved sucessfully
+                        if norm(d_lpec_k_l) <= opts.tol_B_stationarity && stats_lpec.optimal_solution_found && bnlp_solved
                             % if abs(f_lin_opt_k_l) <= settings.tol_B_stationarity
                             stats.stopping_criterion_fullfiled = true;     % B-stationary point found, optimal solution found!
                             stats.solver_message = 'B-stationary point found successfully.';
@@ -1839,7 +1840,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
             end
             %  ------------- max iteration but early terminaton tolorance achieved?---------------------
             if ((stats.max_iterations_reached && stats.success == 0) || n_cycles == 3)&& opts.allow_early_termination
-                if (h_total_k <= opts.tol_B_stationarity_early_term) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity_early_term|| norm(nabla_f_k) <= opts.tol_B_stationarity_early_term))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
+                if stats_lpec.optimal_solution_found && (h_total_k <= opts.tol_B_stationarity_early_term) && ((abs(f_lin_opt_k_l) <= opts.tol_B_stationarity_early_term|| norm(nabla_f_k) <= opts.tol_B_stationarity_early_term))  % if objective zero (either if cost gradient zero, or solution leads to it) = then set step to zero => B stationarity
                     % B-stationary point found, optimal solution found!
                     if n_cycles == 3
                         stats.solver_message = 'Major loop was cycling due to bad problem scaling or too low tolerances. B-stationary point found at lower tolerance.';
@@ -1910,7 +1911,7 @@ classdef Solver < handle & matlab.mixin.indexing.RedefinesParen
                     % [stats.multiplier_based_stationarity, ~] = determine_multipliers_based_stationary_point(x_k_multi,lambda_x_k,dims,opts);
                 end
             end
-            settings.tol_active = tol_active_default;  % reset
+            opts.tol_active = tol_active_default;  % reset
 
 
             % Debug falure of stationary point computation

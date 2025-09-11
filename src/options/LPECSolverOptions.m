@@ -6,7 +6,7 @@ classdef LPECSolverOptions< handle
 
         % MILP Solver for LPEC settings
         lpec_solver(1,1) LpecSolver = LpecSolver.Gurobi; % LpecSolver.Gurobi
-        max_nodes(1,1) double {mustBeInteger, mustBePositive} = 5e2;
+        max_nodes(1,1) double {mustBeInteger, mustBePositive} = 5e3;
         max_time(1,1) double {mustBeReal, mustBePositive} = 2e2; % ~3 min time out;
         cutoff(1,1) double {mustBeReal} = 10;
         rel_tol(1,1) double {mustBeReal, mustBeNonempty} = 1e-9;

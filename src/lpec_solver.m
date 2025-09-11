@@ -33,6 +33,7 @@ stats.itercount = 0; % number simplex iters
 stats.baritercount = 0; % nuber of barrier iters
 stats.nodecount = 0; % number of nodes in BnB
 stats.gap = inf; % integer gap
+stats.optimal_solution_found = false; % B-stationarity can be checked only if the LPEC is solved to optimality, in other cases it is sufficent to have a feasible point.
 
 %% Prepare LPEC
 % add the boundso of the inaries
@@ -282,7 +283,11 @@ switch settings.lpec_solver
             cpu_time_gurobi = nan;
         end
 
-        if ( isequal(result_gurobi.status,'OPTIMAL') || isequal(result_gurobi.status,'NODE_LIMIT')|| isequal(result_gurobi.status,'USER_OBJ_LIMIT') || isequal(result_gurobi.status,'SOLUTION_LIMIT')) && isfield(result_gurobi,'x')
+        if isequal(result_gurobi.status,'OPTIMAL')
+            stats.optimal_solution_found = true;
+        end
+
+        if (isequal(result_gurobi.status,'OPTIMAL') || isequal(result_gurobi.status,'NODE_LIMIT')|| isequal(result_gurobi.status,'USER_OBJ_LIMIT') || isequal(result_gurobi.status,'SOLUTION_LIMIT')) && isfield(result_gurobi,'x')
             results.d_lpec = result_gurobi.x(1:lpec.dims.n_primal);
             results.y_lpec = result_gurobi.x(end-lpec.dims.n_auxiliary+1:end);
             results.f_opt = result_gurobi.objval;
@@ -323,6 +328,9 @@ switch settings.lpec_solver
                 else
                     stats.solver_message  = 'OPTIMAL';
                 end
+                if status == 1
+                    stats.optimal_solution_found = true;
+                end
             case {0,-2,-3,-9}
                 results.d_lpec = lpec.d_lpec*nan;
                 results.y_lpec = lpec.y_lpec*nan;
@@ -355,8 +363,11 @@ switch settings.lpec_solver
             results.y_lpec = round(x(lpec.vtype_num==1));
             results.f_opt = full(r.cost);
             stats.lpec_solution_exists = true;
-
             stats.success = highs_success;
+
+            if strcmp(lpsol.stats.return_status, 'Optimal');
+                stats.optimal_solution_found = true;
+            end
         else
             results.d_lpec = lpec.d_lpec*nan;
             results.y_lpec = lpec.y_lpec*nan;
@@ -400,6 +411,8 @@ switch settings.lpec_solver
             % results.y_lpec = lpec.x_lin(lpec.dims.ind_x1)+results.d_lpec(lpec.dims.ind_x1)>=lpec.x_lin(lpec.dims.ind_x2)+results.d_lpec(lpec.dims.ind_x2);
             results.f_opt = result_homotopy.f;
             stats.lpec_solution_exists = true;
+            stats.optimal_solution_found = true;
+            
         else
             results.d_lpec = result_homotopy.x;
             results.y_lpec = results.d_lpec(lpec.dims.ind_x1)>=results.d_lpec(lpec.dims.ind_x2);
@@ -461,6 +474,7 @@ switch settings.lpec_solver
             y_lpec = lpec.x_lin(lpec.dims.ind_x1)+d_lpec(lpec.dims.ind_x1)>lpec.x_lin(lpec.dims.ind_x2)+d_lpec(lpec.dims.ind_x2);
             lpec_solution_exists  = true;
             solver_message = 'OPTIMAL';
+            stats.optimal_solution_found = true;
         catch
             f_opt = nan;
             y_lpec = nan;
