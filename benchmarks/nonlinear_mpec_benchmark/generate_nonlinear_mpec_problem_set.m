@@ -45,14 +45,21 @@ unfold_struct(dimensions,'caller')
 
 if ~isfield(settings,'nnz_bounded_by_dim')
     nnz_bounded_by_dim = false;
-    
 end
 
-if ~isfield(settings,'inv_cond_num')
-    inv_cond_num = 1e-4;
-    
+if ~isfield(settings,'n_comp_min')
+    n_comp_min = 500; % after this trashold addaptiv bound used
 end
-nnz_factor = 1;
+
+
+if ~isfield(settings,'inv_cond_num')
+    inv_cond_num = 1e-1;
+end
+
+if ~isfield(settings,'nnz_factor')
+    nnz_factor = 1;
+end
+
 
 if ~isfield(settings,'casadi_variable_type')
     casadi_variable_type = 'SX'; % default;
@@ -131,7 +138,6 @@ end
 
 fprintf('Largerst problem: n_var = %d, n_comp = %d \n',max(n_x_vec+2*n_y_vec), max(n_y_vec))
 n_comp_max = max(n_y_vec);
-n_comp_min = 1000; % after this trashold addaptiv bound used
 
 % range for feasible points
 range_x = [0,1];
@@ -229,7 +235,6 @@ for kk = 1:length(objective_functions)
                     % Below minimum: use original range_s_density bounds
                     range_s_density_lb = range_s_density(1);
                     range_s_density_ub = range_s_density(2);
-
                 elseif n_comp >= n_comp_max
                     % At or above maximum: use target bounds
                     range_s_density_lb = 0.0025;
@@ -262,8 +267,12 @@ for kk = 1:length(objective_functions)
                 % Quadratic
                 % ... generate sparse Hessian matrix H (and make sure it it psd if needed)
                 % Quadratic
-                if settings.nnz_bounded_by_dim 
-                    H  = full( sprandsym(n_obj, n_obj/n_obj.^2,inv_cond_num) );               % ... full matrix for easier printing
+                if nnz_bounded_by_dim 
+                    if adaptive_density_bounds
+                        H  = full( sprandsym(n_obj, s_density_A_B) );     % for smaller matrices use provided density bounds, for larger use sparse
+                    else
+                        H  = full( sprandsym(n_obj, n_obj/n_obj.^2,inv_cond_num) );               % ... full matrix for easier printing
+                    end
                 else
                     H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing    
                 end
@@ -549,19 +558,25 @@ for kk = 1:length(objective_functions)
         % Generate problem matrices
         if settings.inequality_constraints
             % Ax + By >= f
+            s_density_A = s_density_A_B;
             if settings.nnz_bounded_by_dim 
-                A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,nnz_factor*n_ineq/(n_x*n_ineq),inv_cond_num);
-            else
-                A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A_B);
+                if ~(n_comp <= n_comp_min && adaptive_density_bounds)
+                    s_density_A = nnz_factor*n_ineq/(n_x*n_ineq);
+                end
             end
+            A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A,inv_cond_num);
+
             A(A~=0) = range_A(1)+A(A~=0);
             A = round(A,n_digits_data);
             if settings.inequality_constraints_coupling_terms
-                if settings.nnz_bounded_by_dim 
-                    B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,nnz_factor*n_ineq/(n_y*n_ineq),inv_cond_num);
-                else
-                    B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,s_density_A_B);
+                s_density_B = s_density_A_B;
+                if settings.nnz_bounded_by_dim
+                    if ~(n_comp <= n_comp_min && adaptive_density_bounds)
+                        s_density_B = nnz_factor*n_ineq/(n_y*n_ineq);
+                    end
                 end
+                B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,s_density_B ,inv_cond_num);
+
                 B(B~=0) = range_B(1)+B(B~=0);
                 B = round(B,n_digits_data);
             else
@@ -573,29 +588,25 @@ for kk = 1:length(objective_functions)
         if r == n_y
             r = r-1;
         end
+
+         
+         
         % s_density_M = (n_non_zero_E-n_y)/n_y^2;
         if settings.variable_density
             % s_density_M = range_s_density(1)+(range_s_density(2)-range_s_density(1)).*rand(1);
             s_density_M = range_s_density_lb +(range_s_density_ub-range_s_density_lb).*rand(1);
+            s_density_M = min(s_density_M, n_non_zero_E/(r*(n_y-r))); % given desnity but not more than 2000 nnz
+            if settings.nnz_bounded_by_dim
+                if ~(n_comp <= n_comp_min && adaptive_density_bounds)
+                    s_density_M = nnz_factor*min(r,n_non_zero_E)/(n_y*n_ineq);
+                end
+            end
         else
             s_density_M = settings.s_density_M;
         end
-        % s_density_M = settings.s_density_M;
+        E = (range_E(2)-range_E(1))*sprand(r,n_y-r,s_density_M,inv_cond_num);
 
-        s_density_M = min(s_density_M, n_non_zero_E/(r*(n_y-r))); % given desnity but not more than 2000 nnz
-                if settings.nnz_bounded_by_dim 
-                        % try
-                            E = (range_E(2)-range_E(1))*sprand(r,n_y-r,n_non_zero_E/(r*(n_y-r)),inv_cond_num);
-                        % catch
-                        %     keyboard;
-                        % end
-
-                else
-                        E = (range_E(2)-range_E(1))*sprand(r,n_y-r,s_density_M);
-                end
-        
         E(E~=0) = range_E(1)+E(E~=0);
-
 
         d1 = range_d1(1)+(range_d1(2)-range_d1(1)).*rand(r,1);
         d2 = range_d2(1)+(range_d2(2)-range_d2(1)).*rand(n_y-r,1);
@@ -617,11 +628,14 @@ for kk = 1:length(objective_functions)
 
         % N = sprand(n_y,n_x,s_density);
         % r = a + (b-a).*rand(100,1);
-        if settings.nnz_bounded_by_dim 
-            N = (range_N(2)-range_N(1))*sprand(n_y,n_x,nnz_factor*n_y/(n_x*n_y),inv_cond_num);
-        else
-            N = (range_N(2)-range_N(1))*sprand(n_y,n_x,s_density_A_B);
+        s_density_N = s_density_A_B;
+        if settings.nnz_bounded_by_dim
+            if ~(n_comp <= n_comp_min && adaptive_density_bounds)
+                s_density_N = nnz_factor*n_y/(n_x*n_y);
+            end
         end
+        N = (range_N(2)-range_N(1))*sprand(n_y,n_x,s_density_N,inv_cond_num);
+
         N(N~=0) = range_N(1)+N(N~=0);
         N = round(N,n_digits_data);
 

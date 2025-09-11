@@ -52,9 +52,10 @@ settings.s_density_M = 0.1;
 
 
 settings.nnz_bounded_by_dim = 1;
-settings.inv_cond_num = 1e-2;
+settings.inv_cond_num = 1e0;
+settings.nnz_factor = 1;
 
-settings.adaptive_density_bounds = 1; % to account for very larg problems
+settings.adaptive_density_bounds = 0; % to account for very larg problems
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.05];
 settings.random_problem_sizes = 1;
@@ -97,8 +98,8 @@ mpec_struct = struct('x',w,'f',f,'g',g,'G',G,'H',H);
 solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg,'ubg',ubg);
 %% Homotopy solver
 settings_homotopy = HomotopySolverOptions();
-% settings_homotopy.homotopy_parameter_steering = "Direct";
-% [result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
+settings_homotopy.homotopy_parameter_steering = "Direct";
+[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
 % f_opt_homotopy = full(result_homotopy.f);
 % w_opt_homotopy = full(result_homotopy.x);
 
@@ -109,18 +110,20 @@ settings_homotopy = HomotopySolverOptions();
 % w_opt_minlp = full(result_minlp.x);
 
 %% MPECopt solver
-solver_settings = mpecopt.Options();
-solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
-solver_settings.settings_lpec.lpec_solver = 'Gurobi';
-solver_settings.use_one_nlp_solver = true;
-solver_settings.problem_in_vertical_from = true;
-solver_settings.settings_casadi_nlp.ipopt.print_level = 5;
+opts = mpecopt.Options();
+opts.relax_and_project_homotopy_parameter_steering = "Direct";
+opts.settings_lpec.lpec_solver = 'Gurobi';
+opts.use_one_nlp_solver = true;
+opts.problem_in_vertical_from = true;
+opts.settings_casadi_nlp.ipopt.print_level = 5;
+opts.rho_TR_phase_ii_init = 1e-1;
+
 % solver_settings.settings_casadi_nlp.ipopt.max_iter = 100;
 % solver_settings.settings_casadi_nlp.jit = true;
 % solver_settings.rho_TR_phase_i_init = 10;
 
 tic
-solver = mpecopt.Solver(mpec_struct, solver_settings);
+solver = mpecopt.Solver(mpec_struct, opts);
 toc
 %%
 [result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);
