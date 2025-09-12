@@ -63,6 +63,7 @@ for ii = N_experiments
     % fid = fopen('current_problem.txt','w');
     % fprintf(fid,'%s\n\n',name);
     % fclose(fid);
+    t_current_exp = tic;
     for jj = n_mpecs
         mpec = mpecs(jj);
         w = mpec.w;
@@ -163,6 +164,12 @@ for ii = N_experiments
     dtable1 = struct2table(dstruct);
     save([results_name '_' num2str(ii)],"dtable1");
     % pause(90); % cool down cpu pause
+    cpu_current_exp = toc(t_current_exp);
+    timing_str = sprintf(' - execution time: %.2f seconds (%.4f hours, %.6f days) \n', cpu_current_exp, cpu_current_exp/3600, cpu_current_exp/86400);
+    combined = strcat(name, timing_str);
+    fid = fopen('cpu_experiments.txt', 'a');
+    fprintf(fid, '%s\n', combined);
+    fclose(fid);
 end
 %% Check results and plot
 dtable = struct2table(dstruct);

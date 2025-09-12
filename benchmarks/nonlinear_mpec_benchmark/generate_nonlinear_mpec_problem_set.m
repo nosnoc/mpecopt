@@ -91,10 +91,12 @@ if settings.random_problem_sizes
     biased_indices = randsample(1:(n_x_max-n_x_min+1), N_problems, true, weights);
     n_x_vec = n_x_min + biased_indices - 1;
     n_y_vec = round(n_x_vec/n_fraction_of_x); % num of comp vars
-    n_ineq_vec = round((settings.n_ineq_lb+(settings.n_ineq_ub-settings.n_ineq_lb)*(rand(1,N_problems)).*n_x_vec));
+    rand_ineq_scale = settings.n_ineq_lb+(settings.n_ineq_ub-settings.n_ineq_lb)*(rand(1,N_problems));
+    n_ineq_vec = round(rand_ineq_scale.*n_x_vec);
     % n_ineq_vec = round((settings.n_ineq_lb+(settings.n_ineq_ub-settings.n_ineq_lb)*(rand(1,N_problems)).*n_x_vec))*3;
 
     N_per_problem = N_rand_prob;
+    if 1
     figure
     n_var = n_x_vec+2*n_y_vec; % total num of vars, non comp, comp1 + comp2 + lift
     scatter(n_var,n_ineq_vec*(1+settings.s_ineq_copy));
@@ -106,6 +108,7 @@ if settings.random_problem_sizes
     ylabel('Number of constraints')
     legend({'Inequality constraints','Equality constraints', 'Comp. constraints'},'Location','northwest')
     axis equal
+    end
     % subplot(122)
     % scatter(n_var,n_y_vec);
     % hold on
@@ -461,6 +464,142 @@ for kk = 1:length(objective_functions)
                     end
                     f = f + q * (q * (q^2 - 20) - 0.1);
                 end
+
+            case 'SCURLY10'
+                scal = 12.0;
+                if n_obj > 10
+                    k = 10;
+                else
+                    k = n_obj;
+                end
+
+                % Compute scaling factors S(i)
+                S = zeros(n_obj, 1);
+                for i = 1:n_obj
+                    rat = (i-1) / (n_obj-1);
+                    S(i) = exp(rat * scal);
+                end
+
+                % Compute objective function
+                for i = 1:min(n_obj-k, n_obj)
+                    % Sum from j=i to min(i+k, n_obj)
+                    gvar = 0;
+                    for j = i:min(i+k, n_obj)
+                        gvar = gvar + S(j) * w(j);
+                    end
+
+                    % Apply P4 group function: gvar * (gvar * (gvar^2 - 20) - 0.1)
+                    f = f + gvar * (gvar * (gvar^2 - 20) - 0.1);
+                end
+
+                % Handle remaining groups for i > n_obj-k
+                for i = max(n_obj-k+1, 1):n_obj
+                    gvar = 0;
+                    for j = i:n_obj
+                        gvar = gvar + S(j) * w(j);
+                    end
+
+                    f = f + gvar * (gvar * (gvar^2 - 20) - 0.1);
+                end
+
+            case 'SCURLY20'
+                if n_obj > 20
+                    k = 20;
+                else
+                    k = n_obj;
+                end
+                scal = 12.0;
+
+                % Compute scaling factors S(i)
+                S = zeros(n_obj, 1);
+                for i = 1:n_obj
+                    rat = (i-1) / (n_obj-1);
+                    S(i) = exp(rat * scal);
+                end
+
+                % Compute objective function
+                for i = 1:min(n_obj-k, n_obj)
+                    % Sum from j=i to min(i+k, n_obj)
+                    gvar = 0;
+                    for j = i:min(i+k, n_obj)
+                        gvar = gvar + S(j) * w(j);
+                    end
+
+                    % Apply P4 group function: gvar * (gvar * (gvar^2 - 20) - 0.1)
+                    f = f + gvar * (gvar * (gvar^2 - 20) - 0.1);
+                end
+
+                % Handle remaining groups for i > n_obj-k
+                for i = max(n_obj-k+1, 1):n_obj
+                    gvar = 0;
+                    for j = i:n_obj
+                        gvar = gvar + S(j) * w(j);
+                    end
+
+                    f = f + gvar * (gvar * (gvar^2 - 20) - 0.1);
+                end
+
+
+            case 'CURLY10'
+                 if n_obj > 10
+                    k = 10;
+                else
+                    k = n_obj;
+                end
+
+                % Compute objective function
+                for i = 1:min(n_obj-k, n_obj)
+                    % Sum from j=i to min(i+k, n_obj)
+                    gvar = 0;
+                    for j = i:min(i+k, n_obj)
+                        gvar = gvar + w(j);
+                    end
+
+                    % Apply P4 group function: gvar * (gvar * (gvar^2 - 20) - 0.1)
+                    f = f + gvar * (gvar * (gvar^2 - 20) - 0.1);
+                end
+
+                % Handle remaining groups for i > n_obj-k
+                for i = max(n_obj-k+1, 1):n_obj
+                    gvar = 0;
+                    for j = i:n_obj
+                        gvar = gvar + w(j);
+                    end
+
+                    f = f + gvar * (gvar * (gvar^2 - 20) - 0.1);
+                end
+            case 'FMINSURF'
+                p = round(sqrt(n_obj));  % assuming n_obj = p^2
+                p_minus_1 = max(p - 1,1);
+                scale = 1 / (p_minus_1)^2;
+                param = 0.5 * (p_minus_1)^2;
+
+                % Surface area terms (SQROOT groups)
+                for i = 1:p_minus_1
+                    for j = 1:p_minus_1
+                        % Convert 2D indices to 1D
+                        idx_ij = (j-1)*p + i;
+                        idx_i1j1 = j*p + (i+1);
+                        idx_i1j = (j-1)*p + (i+1);
+                        idx_ij1 = j*p + i;
+
+                        % a(i,j) = x(i,j) - x(i+1,j+1)
+                        a_ij = w(idx_ij) - w(idx_i1j1);
+                        % b(i,j) = x(i+1,j) - x(i,j+1)
+                        b_ij = w(idx_i1j) - w(idx_ij1);
+
+                        alpha = 1 + param * (a_ij^2 + b_ij^2);
+                        f = f + scale * sqrt(alpha);
+                    end
+                end
+
+                % Average height term (L2 group)
+                avg_height = 0;
+                for idx = 1:n_obj
+                    avg_height = avg_height + w(idx);
+                end
+                f = f + (p^4) * scale * avg_height^2;
+
             case 'FLETBV3M'
                 f = 0;
                 for i = 1:n_obj
@@ -472,6 +611,20 @@ for kk = 1:length(objective_functions)
                     end
                     % element contribution (scaled sin/cos)
                     f = f + 0.5 * q^2 + 100*sin(0.01*w(i)) + 1e2*cos(w(i));
+                end
+
+            case 'SPARSQUR'
+                for i = 1:n_obj
+                    % Calculate indices based on SIF modular arithmetic
+                    j2 = mod(2*i - 1, n_obj) + 1;
+                    j3 = mod(3*i - 1, n_obj) + 1;
+                    j5 = mod(5*i - 1, n_obj) + 1;
+                    j7 = mod(7*i - 1, n_obj) + 1;
+                    j11 = mod(11*i - 1, n_obj) + 1;
+
+                    % Sum of squares with weight i
+                    alpha = w(i) + w(j2) + w(j3) + w(j5) + w(j7) + w(j11);
+                    f = f + 0.5 * i * alpha^2;
                 end
 
             case 'NCVXQP6'

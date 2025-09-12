@@ -34,6 +34,7 @@ settings.objective_functions_all = {'Quadratic_psd','Quadratic_ind',...
 
 settings.objective_functions = {settings.objective_functions_all{15}};
 
+settings.objective_functions = {'SCURLY30'};
 
 settings.rescale_factor = 1;
 settings.round_all_data = 1;
@@ -55,7 +56,7 @@ settings.nnz_bounded_by_dim = 1;
 settings.inv_cond_num = 1e0;
 settings.nnz_factor = 1;
 
-settings.adaptive_density_bounds = 0; % to account for very larg problems
+settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.05];
 settings.random_problem_sizes = 1;
@@ -66,8 +67,8 @@ settings.n_ineq_lb = 0.5;
 settings.n_fraction_of_x = 0.5;
 
 dimensions.N_rand_prob = 1; % number of problems per objective
-dimensions.n_x_max = 1500;
-dimensions.n_x_min = 1500;
+dimensions.n_x_max = 2000;
+dimensions.n_x_min = 2000;
 
 
 
@@ -99,7 +100,7 @@ solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg,'ubg',ubg
 %% Homotopy solver
 settings_homotopy = HomotopySolverOptions();
 settings_homotopy.homotopy_parameter_steering = "Direct";
-[result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
+% [result_homotopy,stats_homotopy] = mpec_homotopy_solver(mpec,solver_initalization,settings_homotopy);
 % f_opt_homotopy = full(result_homotopy.f);
 % w_opt_homotopy = full(result_homotopy.x);
 
