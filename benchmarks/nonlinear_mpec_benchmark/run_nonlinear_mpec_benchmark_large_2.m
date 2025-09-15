@@ -167,8 +167,10 @@ opts = {opts1, opts2, opts3, ...
        minlp_opts}; % list of options to pass to mpecsol (option structs)
 
 %% Create data struct
-N_experiments = [4 3 5 1 2 6 7];
-% N_experiments = [3 1];
+% N_experiments = [4 3 5 1 2 6 7];
+% % N_experiments = [3 1];
+N_experiments = [4 3 1 2 6 5];
+
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot
 dtable = dtable1;

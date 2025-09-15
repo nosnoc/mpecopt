@@ -175,7 +175,7 @@ range_E = [-1,1]./rescale_factor; % uniform
 range_E = [3,4]./rescale_factor; % uniform
 range_q = [-20,10]./rescale_factor; % uniform
 range_grad = [-10,10];
-range_ubw = [1e1,1e3];
+range_ubw = [1e1,0.5e3];
 
 mpecs = [];
 n_eq_vec = [];

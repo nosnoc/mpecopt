@@ -50,9 +50,9 @@ settings.objective_functions = {'Fletcher','McCormick',...
     'NCVXQP6','DIXCHLNV',...
     };
 
-settings.objective_functions = {'Fletcher','McCormick',...
-    'NCVXQP6','DIXCHLNV',...
-    };
+% settings.objective_functions = {'Fletcher','McCormick',...
+%     'NCVXQP6','DIXCHLNV',...
+%     };
 
 settings.rescale_factor = 1;
 settings.round_all_data = 1;
@@ -87,12 +87,8 @@ dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 
 % Problem size 
 dimensions.N_rand_prob = 3; % number of problems per objective
-dimensions.n_x_max = 1560;
+dimensions.n_x_max = 1000;
 dimensions.n_x_min = 100;
-
-dimensions.N_rand_prob = 1; % number of problems per objective
-dimensions.n_x_max = 20;
-dimensions.n_x_min = 10;
 
 
 t_gen = tic;
@@ -176,7 +172,7 @@ opts = {opts1, opts2, opts3, ...
 
 %% Create data struct
 N_experiments = [4 3 5 1 2 6 7];
-% N_experiments = [1];
+N_experiments = [1 2 3 4 6];
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot
 dtable = dtable1;
