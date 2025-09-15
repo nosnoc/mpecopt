@@ -1,8 +1,8 @@
 clear; clc; close all;
-problem_set_name = 'nonlinear_med'; % (add large, degenerate, nonlinear, include lifted)
+problem_set_name = 'nonlinear_small'; % (add large, degenerate, nonlinear, include lifted)
 
 %% file names
-filename = 'nonlinear_mpec_med'; % name for figures and excel table
+filename = 'nonlinear_mpec_small'; % name for figures and excel table
 results_name = ['results/' filename '_' datestr(datetime("today"))]; % name for matlab .dat with results
 
 %% Generate test set
@@ -87,7 +87,7 @@ dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 
 % Problem size 
 dimensions.N_rand_prob = 3; % number of problems per objective
-dimensions.n_x_max = 1050;
+dimensions.n_x_max = 200;
 dimensions.n_x_min = 100;
 
 
@@ -172,7 +172,7 @@ opts = {opts1, opts2, opts3, ...
 
 %% Create data struct
 N_experiments = [4 3 5 1 2 6 7];
-N_experiments = [1 2 3 4 6];
+N_experiments = [1 4 6];
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot
 dtable = dtable1;

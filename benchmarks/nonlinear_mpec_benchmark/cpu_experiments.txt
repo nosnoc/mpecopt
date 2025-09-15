@@ -1,0 +1,2 @@
+MPECopt-Reg-Gurobi - execution time: 106.16 seconds (0.0295 hours, 0.001229 days)
+Reg - execution time: 98.42 seconds (0.0273 hours, 0.001139 days)
