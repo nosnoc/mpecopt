@@ -70,9 +70,9 @@ settings.s_density_M = 0.1;
 settings.nnz_bounded_by_dim = 1;
 settings.inv_cond_num = 1e0;
 settings.nnz_factor = 1;
-settings.n_comp_min = 400;
+settings.n_comp_min = 500;
 
-settings.adaptive_density_bounds = 0; % to account for very larg problems
+settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.05];
 settings.random_problem_sizes = 1;

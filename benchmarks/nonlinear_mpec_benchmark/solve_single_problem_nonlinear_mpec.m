@@ -34,11 +34,11 @@ settings.objective_functions_all = {'Quadratic_psd','Quadratic_ind',...
 
 settings.objective_functions = {settings.objective_functions_all{15}};
 
-settings.objective_functions = {'SCURLY30'};
+settings.objective_functions = {'Quadratic_psd'};
 
 settings.rescale_factor = 1;
 settings.round_all_data = 1;
-settings.n_digits = 4;
+settings.n_digits = 6;
 settings.bounded_w = 1;
 settings.use_normal_distributions_for_feasible_point = 1;
 settings.alpha_lin = 10; % f + alpha_lin*[c;d]'*[x;y]'
@@ -54,23 +54,22 @@ settings.s_density_M = 0.1;
 
 settings.nnz_bounded_by_dim = 1;
 settings.inv_cond_num = 1e0;
-settings.nnz_factor = 1;
+settings.nnz_factor = 1.05;
 
-settings.adaptive_density_bounds = 1; % to account for very larg problems
+settings.adaptive_density_bounds = 0; % to account for very larg problems
 settings.variable_density = 1;
-settings.range_s_density = [0.01 0.05];
+settings.range_s_density = [0.01 0.1];
 settings.random_problem_sizes = 1;
 
-settings.n_ineq_ub = 2; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
+settings.n_ineq_ub = 3; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
 settings.n_ineq_lb = 0.5;
 
 settings.n_fraction_of_x = 0.5;
 
 dimensions.N_rand_prob = 1; % number of problems per objective
-dimensions.n_x_max = 2000;
-dimensions.n_x_min = 2000;
-
-
+% settings.n_comp_min = 250;
+dimensions.n_x_max = 260;
+dimensions.n_x_min = 260;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 mpecs = generate_nonlinear_mpec_problem_set(problem_set_name,settings,dimensions);
@@ -116,8 +115,8 @@ opts.relax_and_project_homotopy_parameter_steering = "Direct";
 opts.settings_lpec.lpec_solver = 'Gurobi';
 opts.use_one_nlp_solver = true;
 opts.problem_in_vertical_from = true;
-opts.settings_casadi_nlp.ipopt.print_level = 5;
-opts.rho_TR_phase_ii_init = 1e-1;
+opts.settings_casadi_nlp.ipopt.print_level = 0;
+% opts.rho_TR_phase_ii_init = 1e-1;
 
 % solver_settings.settings_casadi_nlp.ipopt.max_iter = 100;
 % solver_settings.settings_casadi_nlp.jit = true;
@@ -129,6 +128,8 @@ toc
 %%
 [result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);
 stats_mpecopt.cpu_time_total
+stats_mpecopt.iter.nodecount_phase_i
+stats_mpecopt.iter.nodecount_phase_ii
 % w_opt_mpecopt = full(result_mpecopt.x);
 % f_opt_mpecopt = full(result_mpecopt.f);
 

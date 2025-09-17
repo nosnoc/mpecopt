@@ -628,7 +628,7 @@ settings.tol_active = tol_active_default;  % reset
 % end
 %% Check B stationarity
 % ----------------------------------- B STAT -------------------------------------
-f_lpec = 1;
+f_lpec = 1e3;
 rho_TR = 1e-3;
 
 if ~settings.problem_is_lpec && success

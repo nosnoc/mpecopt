@@ -16,7 +16,7 @@ classdef Options < handle
         tol (1,1) double {mustBeReal, mustBeNonnegative} = 1e-8;
         tol_B_stationarity (1,1) double {mustBeReal, mustBeNonnegative} = 1e-8;
         tol_feasibility (1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
-        tol_B_stationarity_early_term (1,1) double {mustBeReal, mustBeNonnegative} = 1e-7;
+        tol_B_stationarity_early_term (1,1) double {mustBeReal, mustBeNonnegative} = 5e-8;
         tol_active (1,1) double {mustBeReal, mustBeNonnegative} = 1e-9; % below this treshold a constaint is considered to be active
         
         rescale_large_objective_gradients (1,1) logical = true;

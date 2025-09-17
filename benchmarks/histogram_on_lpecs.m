@@ -4,9 +4,9 @@ latexify_plot()
 % dtable;
 % lpec_dstruct;
 
-S = load('macmpec_general_14-Sep-2025_lpec_details');
+S = load('random_lpecs2_07-Sep-2025_lpec_details');
 lpec_dstruct = S.lpec_dstruct;
-S = load('macmpec_general_14-Sep-2025');
+S = load('random_lpecs2_07-Sep-2025');
 %
 % S = load('nonlinear_mpec_med_15-Sep-2025_lpec_details');
 % lpec_dstruct = S.lpec_dstruct;
