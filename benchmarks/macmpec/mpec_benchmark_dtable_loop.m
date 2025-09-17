@@ -169,6 +169,7 @@ for ii = N_experiments
     % save intermediate reuslts 
     dtable1 = struct2table(dstruct);
     save([results_name '_' num2str(ii)],"dtable1");
+    save([results_name '_lpec_details_' num2str(ii)],"lpec_dstruct");
     % pause(90); % cool down cpu pause
 end
 %% Check results and plot

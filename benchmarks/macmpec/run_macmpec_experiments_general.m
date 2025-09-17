@@ -55,12 +55,12 @@ mpecs = mpecs(N_interesting);
 
 
 %% Define list of solvers to use
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Guroby-ET", ...
-                  "Reg", "NLP", ...
+solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_{\infty}$-Gurobi", "MPECopt-Reg-Guroby-ET", ...
+                  "Reg", "NLP", "$\ell_{\infty}$",...
                   "MINLP"];
 
 solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
-                    @mpec_homotopy_solver,@mpec_homotopy_solver,...
+                    @mpec_homotopy_solver,@mpec_homotopy_solver,@mpec_homotopy_solver, ...
                     @mpec_minlp_solver};
 
 opts1 = mpecopt.Options();
@@ -74,7 +74,7 @@ opts1.use_one_nlp_solver = false;
 opts2 = mpecopt.Options();
 opts2.solver_name = solver_names{2};
 opts2.settings_lpec.lpec_solver = "Gurobi";
-opts2.relax_and_project_homotopy_parameter_steering = "Ell_1";
+opts2.relax_and_project_homotopy_parameter_steering = "Ell_inf";
 opts2.use_one_nlp_solver = false;
 % opts2.settings_lpec.stop_lpec_at_feasible = true;
 % opts2.rho_TR_phase_i_init = 1e-3;
@@ -87,7 +87,7 @@ opts3.relax_and_project_homotopy_parameter_steering = "Direct";
 opts3.use_one_nlp_solver = false;
 opts3.settings_lpec.stop_lpec_at_feasible = true;
 opts3.settings_lpec.stop_lpec_at_descent = true;
-opts3.consider_all_complementarities_in_lpec = false;
+opts3.consider_all_complementarities_in_lpec = true;
 
 scholtes_opts1 = HomotopySolverOptions();
 scholtes_opts1.homotopy_parameter_steering = 'Direct';
@@ -97,18 +97,21 @@ scholtes_opts2.homotopy_parameter_steering = 'Direct';
 scholtes_opts2.max_iter = 1;
 scholtes_opts2.sigma0 = 0;
 
+scholtes_opts3 = HomotopySolverOptions();
+scholtes_opts3.homotopy_parameter_steering = 'Ell_inf';
+
 minlp_opts = MINLPSolverOptions();
 minlp_opts.settings_casadi_nlp.bonmin.time_limit = 600;
 
 opts = {opts1, opts2, opts3, ...
-       scholtes_opts1, scholtes_opts2,...
+       scholtes_opts1, scholtes_opts2, scholtes_opts3,...
        minlp_opts}; % list of options to pass to mpecsol (option structs)
 
 
 %% Create data struct
 % N_experiments = [1, 3:6];
-N_experiments = [1:7];
-% N_experiments  = [1, 4, 6];
+N_experiments = [1:6];
+N_experiments  = [2, 6];
 
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 

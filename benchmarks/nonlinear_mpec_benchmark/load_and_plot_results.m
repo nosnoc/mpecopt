@@ -20,7 +20,7 @@ plot_settings.nlps_solved = 1;
 plot_settings.lpecs_cpu_time = 0;
 plot_settings.nlp_cpu_time = 0; % aggegated nlp times phase I and II
 
-plot_settings.max_nlp_cpu_time = 0;
+plot_settings.max_nlp_cpu_time = 1;
 plot_settings.max_lpec_cpu_time = 0;
 
 plot_settings.n_biactive_count = 0;
@@ -36,14 +36,14 @@ plot_settings.lpec_phases_cpu_time = 0;
 plot_settings.solved_in_phase_i = 0;
 
 plot_settings.objective = 0;
-plot_settings.objective_rescaled = 0;
+plot_settings.objective_rescaled = 1;
 
 % split cpu time among phases and show in bar plot (just report for mpecopt
 % guroi)
 plot_settings.stationary_points = 0;
 plot_settings.b_stationarity = 0;
 plot_settings.b_stationarty_as_success_criterion = 0;
-plot_settings.plot_only_sucessful = 1;
+plot_settings.plot_only_sucessful = 0;
 
 plot_settings.save_plot = 1;
 
@@ -51,52 +51,53 @@ plot_settings.save_plot = 1;
 results = 1;
 switch results
     case 1
-        S = load('nonlinear_mpec_general_08-Nov-2024');
+        S = load('nonlinear_mpec_large1_15-Sep-2025_5');
         % S = load('nonlinear_mpec_general2_09-Nov-2024');
         try
             dtable = S.dtable;
         catch
             dtable = S.dtable1;
         end
-        solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS",...
-            "MPECopt-$\ell_1$-Gurobi", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
+        solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-Gurobi-ET","Reg", "NLP", "$\ell_1$-Penalty"];
+
         filename = 'nonlinear_mpec';
-        N_plot = [1:6];
-        plot_settings.stationary_points = 1;
-        plot_settings.b_stationarity = 1;
+        N_plot = [1:5];
+        plot_settings.stationary_points = 0;
+        plot_settings.b_stationarity = 0;
         plot_settings.n_biactive = 1;
         %% Who is not B stationary?
-        dtable_ii = dtable(dtable.solver_name == solver_names{1},:);
-        dtable_jj = dtable(dtable.solver_name == solver_names{4},:);
-        ind_not_B = find(dtable_jj.success == 1 & dtable_jj.b_stationarity == 0);
-        % For Reg
-        % diff in obj
-        delta_f = dtable_ii.f(ind_not_B)-dtable_jj.f(ind_not_B);
-        delta_f_relative_small = 100*abs(delta_f)./abs(dtable_ii.f(ind_not_B)+1e-16)
-        delta_f_relative_small_ind = abs(delta_f)./abs(dtable_ii.f(ind_not_B)+1e-16)<1e-3;
-        dtable_temp = dtable_jj;
-        dtable_temp.b_stationarity(ind_not_B(delta_f_relative_small_ind)) = 1;
-        dtable_temp.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind)) = dtable_ii.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind));
-        dtable_temp.problem_name(ind_not_B(~delta_f_relative_small_ind))
-        dtable_temp.prob_num(ind_not_B(~delta_f_relative_small_ind))
-        dtable_temp.f_lpec(ind_not_B(~delta_f_relative_small_ind))
-        dtable(dtable.solver_name == solver_names{4},:) = dtable_temp;
-        % For pen
-        dtable_ii = dtable(dtable.solver_name == solver_names{3},:);
-        dtable_jj = dtable(dtable.solver_name == solver_names{6},:);
-        ind_not_B = find(dtable_jj.success == 1 & dtable_jj.b_stationarity == 0);
-        % diff in obj
-        delta_f = dtable_ii.f(ind_not_B)-dtable_jj.f(ind_not_B);
-        delta_f_relative_small = 100*abs(delta_f)./abs(dtable_ii.f(ind_not_B)+1e-16)
-        delta_f_relative_small_ind = abs(dtable_ii.f(ind_not_B)-dtable_jj.f(ind_not_B))./abs(dtable_ii.f(ind_not_B)+1e-16)<1e-3;
-        dtable_temp = dtable_jj;
-        dtable_temp.b_stationarity(ind_not_B(delta_f_relative_small_ind)) = 1;
-        dtable_temp.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind)) = dtable_ii.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind));
-        dtable_temp.problem_name(ind_not_B(~delta_f_relative_small_ind))
-        dtable_temp.prob_num(ind_not_B(~delta_f_relative_small_ind))
-        dtable_temp.f_lpec(ind_not_B(~delta_f_relative_small_ind))
-        dtable(dtable.solver_name == solver_names{6},:) = dtable_temp;
-
+        if 0
+            dtable_ii = dtable(dtable.solver_name == solver_names{1},:);
+            dtable_jj = dtable(dtable.solver_name == solver_names{4},:);
+            ind_not_B = find(dtable_jj.success == 1 & dtable_jj.b_stationarity == 0);
+            % For Reg
+            % diff in obj
+            delta_f = dtable_ii.f(ind_not_B)-dtable_jj.f(ind_not_B);
+            delta_f_relative_small = 100*abs(delta_f)./abs(dtable_ii.f(ind_not_B)+1e-16)
+            delta_f_relative_small_ind = abs(delta_f)./abs(dtable_ii.f(ind_not_B)+1e-16)<1e-3;
+            dtable_temp = dtable_jj;
+            dtable_temp.b_stationarity(ind_not_B(delta_f_relative_small_ind)) = 1;
+            dtable_temp.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind)) = dtable_ii.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind));
+            dtable_temp.problem_name(ind_not_B(~delta_f_relative_small_ind))
+            dtable_temp.prob_num(ind_not_B(~delta_f_relative_small_ind))
+            dtable_temp.f_lpec(ind_not_B(~delta_f_relative_small_ind))
+            dtable(dtable.solver_name == solver_names{4},:) = dtable_temp;
+            % For pen
+            dtable_ii = dtable(dtable.solver_name == solver_names{3},:);
+            dtable_jj = dtable(dtable.solver_name == solver_names{6},:);
+            ind_not_B = find(dtable_jj.success == 1 & dtable_jj.b_stationarity == 0);
+            % diff in obj
+            delta_f = dtable_ii.f(ind_not_B)-dtable_jj.f(ind_not_B);
+            delta_f_relative_small = 100*abs(delta_f)./abs(dtable_ii.f(ind_not_B)+1e-16)
+            delta_f_relative_small_ind = abs(dtable_ii.f(ind_not_B)-dtable_jj.f(ind_not_B))./abs(dtable_ii.f(ind_not_B)+1e-16)<1e-3;
+            dtable_temp = dtable_jj;
+            dtable_temp.b_stationarity(ind_not_B(delta_f_relative_small_ind)) = 1;
+            dtable_temp.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind)) = dtable_ii.multiplier_based_stationarity(ind_not_B(delta_f_relative_small_ind));
+            dtable_temp.problem_name(ind_not_B(~delta_f_relative_small_ind))
+            dtable_temp.prob_num(ind_not_B(~delta_f_relative_small_ind))
+            dtable_temp.f_lpec(ind_not_B(~delta_f_relative_small_ind))
+            dtable(dtable.solver_name == solver_names{6},:) = dtable_temp;
+        end
     case 2
 
         S = load('macmpec_phase_i_29-Oct-2024');

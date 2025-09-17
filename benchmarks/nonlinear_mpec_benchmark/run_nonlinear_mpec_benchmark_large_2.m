@@ -50,6 +50,7 @@ settings.objective_functions = {'Fletcher','McCormick',...
     'NCVXQP6','DIXCHLNV',...
     };
 
+
 settings.rescale_factor = 1;
 settings.round_all_data = 1;
 settings.n_digits = 4;
@@ -93,11 +94,11 @@ t_mpec_gen = toc(t_gen);
 fprintf('Problem generation time : %2.2f \n',t_mpec_gen)
 
 %% Solver settings
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Gurobi-ET",...
-                  "Reg", "NLP", "$\ell_1$-Penalty", "MINLP"];
+solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Gurobi-ET", "MPECopt-$\ell_{\infty}$-Gurobi",...
+                  "Reg", "NLP", "$\ell_1$-Penalty","$\ell_\infty$-Penalty", "MINLP"];
 
-solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
-                    @mpec_homotopy_solver,@mpec_homotopy_solver, @mpec_homotopy_solver,...
+solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
+                    @mpec_homotopy_solver,@mpec_homotopy_solver, @mpec_homotopy_solver,@mpec_homotopy_solver,...
                     @mpec_minlp_solver};
 
 opts1 = mpecopt.Options();
@@ -139,6 +140,17 @@ opts3.problem_in_vertical_from = true;
 opts3.settings_casadi_nlp.ipopt.max_wall_time = 900;
 % opts3.rho_TR_phase_i_init = 1e-2;
 
+opts4 = mpecopt.Options();
+opts4.solver_name = solver_names{4};
+opts4.settings_lpec.lpec_solver = "Gurobi";
+opts4.relax_and_project_homotopy_parameter_steering = "Ell_inf";
+opts4.use_one_nlp_solver = false;
+opts4.problem_in_vertical_from = false;
+opts4.settings_casadi_nlp.ipopt.max_wall_time = 900;
+% opts2.settings_lpec.stop_lpec_at_feasible = true;
+% opts2.rho_TR_phase_i_init = 1e-3;
+
+
 scholtes_opts1 = HomotopySolverOptions();
 scholtes_opts1.homotopy_parameter_steering = 'Direct';
 scholtes_opts1.problem_in_vertical_from = true;
@@ -149,7 +161,7 @@ scholtes_opts2.homotopy_parameter_steering = 'Direct';
 scholtes_opts2.max_iter = 1;
 scholtes_opts2.sigma0 = 0;
 scholtes_opts2.problem_in_vertical_from = true;
-scholtes_opts2.settings_casadi_nlp.ipopt.max_wall_time = 1800;
+scholtes_opts2.settings_casadi_nlp.ipopt.max_wall_time = 2700;
 
 
 scholtes_opts3 = HomotopySolverOptions();
@@ -158,18 +170,24 @@ scholtes_opts3.problem_in_vertical_from = true;
 scholtes_opts3.settings_casadi_nlp.ipopt.max_wall_time = 900;
 
 
+scholtes_opts4 = HomotopySolverOptions();
+scholtes_opts4.homotopy_parameter_steering = 'Ell_inf';
+scholtes_opts4.problem_in_vertical_from = false;
+scholtes_opts4.settings_casadi_nlp.ipopt.max_wall_time = 900;
+
+
 minlp_opts = MINLPSolverOptions();
 minlp_opts.settings_casadi_nlp.bonmin.time_limit = 1800;
 scholtes_opts3.problem_in_vertical_from = true;
 
-opts = {opts1, opts2, opts3, ...
-       scholtes_opts1, scholtes_opts2, scholtes_opts3,...
+opts = {opts1, opts2, opts3, opts4,...
+       scholtes_opts1, scholtes_opts2, scholtes_opts3, scholtes_opts4,...
        minlp_opts}; % list of options to pass to mpecsol (option structs)
 
 %% Create data struct
 % N_experiments = [4 3 5 1 2 6 7];
 % % N_experiments = [3 1];
-N_experiments = [4 3 1 2 6 5];
+N_experiments = [5 3 1 4 8 6];
 
 nonlinear_mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 %%  Pick which results to plot

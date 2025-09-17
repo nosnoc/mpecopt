@@ -163,6 +163,8 @@ for ii = N_experiments
     % save intermediate reuslts 
     dtable1 = struct2table(dstruct);
     save([results_name '_' num2str(ii)],"dtable1");
+    save([results_name '_lpec_details_' num2str(ii)],"lpec_dstruct");
+
     % pause(90); % cool down cpu pause
     cpu_current_exp = toc(t_current_exp);
     timing_str = sprintf(' - execution time: %.2f seconds (%.4f hours, %.6f days) \n', cpu_current_exp, cpu_current_exp/3600, cpu_current_exp/86400);

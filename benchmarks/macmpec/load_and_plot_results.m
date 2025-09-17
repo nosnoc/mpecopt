@@ -52,30 +52,16 @@ switch results
     case 1
         % S = load('macmpec_general_30-Oct-2024');      
         % S = load('macmpec_general_07-Nov-2024');
-        S = load('macmpec_general_06-Sep-2025');
+        S = load('macmpec_general_14-Sep-2025');
         dtable = S.dtable;
-        % solver_names  = ["MPECopt-Gurobi", "MPECopt-HiGHS",...
-        %     "MPECopt-Simple", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
+        % solver_names = unique(dtable.solver_name);
 
-
-        % solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS",...
-        %               "MPECopt-$\ell_1$-Gurobi", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
-
-        solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-Reg-HiGHS", "MPECopt-$\ell_1$-Gurobi", ...
-                  "Reg" , "NLP", ...
+    solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_1$-Gurobi", "MPECopt-Reg-Guroby-ET", ...
+                  "Reg", "NLP", ...
                   "MINLP"];
 
-        solver_names = ["MINLP"
-                        "MPECopt-$\ell_1$-Gurobi"
-                        "MPECopt-Reg-Gurobi"
-                        "NLP"
-                        "Reg"
-                        "MINLP"
-                        ];
 
-
-        % solver_names  = ["MPECopt-Gurobi", "MPECopt-Reg-HiGHS",...
-                      % "MPECopt-$\ell_1$-Gurobi", "Reg" , "Pen-$\ell_{\infty}$", "Pen-$\ell_{1}$"];
+    
         filename = 'macmpec';
         N_plot = [1:6];
         plot_settings.stationary_points = 1;
@@ -84,7 +70,7 @@ switch results
         plot_settings.solved_in_phase_i = 1;
         %% Who is not B stationary?
         dtable_ii = dtable(dtable.solver_name == solver_names{1},:);
-        dtable_jj = dtable(dtable.solver_name == solver_names{3},:);
+        dtable_jj = dtable(dtable.solver_name == solver_names{4},:);
         ind_not_B = find(dtable_jj.success == 1 & dtable_jj.b_stationarity == 0);
         % For Reg
         % diff in obj
