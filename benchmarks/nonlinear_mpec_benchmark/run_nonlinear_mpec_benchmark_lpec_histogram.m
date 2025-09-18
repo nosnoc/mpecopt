@@ -51,6 +51,7 @@ settings.s_density_M = 0.5;
 settings.s_density_A_B = 0.05; % all same or change
 settings.s_density_M = 0.1;
 
+settings.nnz_bounded_by_dim = 0;
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.1];
 settings.random_problem_sizes = 1;
@@ -58,6 +59,7 @@ settings.random_problem_sizes = 1;
 settings.n_ineq_ub = 3; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
 settings.n_ineq_lb = 0.5;
 
+settings.inv_cond_num = [];
 % Problem size 
 
 dimensions.N_rand_prob = 3; % number of problems per objective
@@ -65,7 +67,7 @@ dimensions.n_x_max = 425;
 dimensions.n_x_min = 100;
 
 
-% dimensions.N_rand_prob = 3; % number of problems per objective
+% dimensions.N_rand_prob = 1; % number of problems per objective
 % dimensions.n_x_max = 50;
 % dimensions.n_x_min = 10;
 
