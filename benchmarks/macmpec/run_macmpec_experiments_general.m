@@ -44,14 +44,14 @@ for ii=1:length(macmpec_json)
     mpecs = [mpecs,mpec];
 end
 
-N_interesting = [];
-for ii=1:length(macmpec_json)
-    if mpecs(ii).n_w <= 100
-        N_interesting = [N_interesting; ii];
-    end
-end
+% N_interesting = [];
+% for ii=1:length(macmpec_json)
+%     if mpecs(ii).n_w <= 100
+%         N_interesting = [N_interesting; ii];
+%     end
+% end
 
-mpecs = mpecs(N_interesting);
+% mpecs = mpecs(N_interesting);
 
 
 %% Define list of solvers to use
@@ -110,8 +110,8 @@ opts = {opts1, opts2, opts3, ...
 
 %% Create data struct
 % N_experiments = [1, 3:6];
-N_experiments = [1:6];
-N_experiments  = [2, 6];
+N_experiments = [1:7];
+% N_experiments  = [2, 6];
 
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 

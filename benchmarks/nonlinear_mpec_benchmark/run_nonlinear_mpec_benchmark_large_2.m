@@ -66,15 +66,15 @@ settings.s_density_M = 0.5;
 settings.s_density_A_B = 0.05; % all same or change
 settings.s_density_M = 0.1;
 
-
+settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.nnz_bounded_by_dim = 1;
 settings.inv_cond_num = 1e0;
-settings.nnz_factor = 1;
-settings.n_comp_min = 500;
+settings.nnz_factor = 1.00;
+settings.n_comp_min = 1000;
 
-settings.adaptive_density_bounds = 1; % to account for very larg problems
+
 settings.variable_density = 1;
-settings.range_s_density = [0.01 0.05];
+settings.range_s_density = [0.01 0.1];
 settings.random_problem_sizes = 1;
 
 settings.n_ineq_ub = 2; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
@@ -84,7 +84,7 @@ dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 
 % Problem size 
 dimensions.N_rand_prob = 3; % number of problems per objective
-dimensions.n_x_max = 3100;
+dimensions.n_x_max = 2100;
 dimensions.n_x_min = 100;
 
 

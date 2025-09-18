@@ -14,3 +14,6 @@ $\ell_\infty$-Penalty - execution time: 1.22 seconds (0.0003 hours, 0.000014 day
 NLP - execution time: 0.97 seconds (0.0003 hours, 0.000011 days)
 Gurobi - execution time: 18.53 seconds (0.0051 hours, 0.000214 days)
 Gurobi-early-I - execution time: 16.31 seconds (0.0045 hours, 0.000189 days)
+Gurobi - execution time: 0.10 seconds (0.0000 hours, 0.000001 days)
+Gurobi-early-I - execution time: 0.02 seconds (0.0000 hours, 0.000000 days)
+Gurobi-early-I-II - execution time: 0.03 seconds (0.0000 hours, 0.000000 days)

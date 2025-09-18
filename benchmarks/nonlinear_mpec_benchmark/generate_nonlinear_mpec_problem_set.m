@@ -86,7 +86,7 @@ if settings.random_problem_sizes
     n_x_max = max(N_problems+n_x_min,n_x_max);
     % n_x_vec = n_x_min+randperm(n_x_max-n_x_min,N_problems); % num of non comp vars
     % Create a weighted distribution favoring smaller values
-    weights = linspace(5, 1, n_x_max-n_x_min+1);  % Higher weights for smaller indices
+    weights = linspace(10, 1, n_x_max-n_x_min+1);  % Higher weights for smaller indices
     weights = weights / sum(weights);  % Normalize
     % Generate biased random indices
     biased_indices = randsample(1:(n_x_max-n_x_min+1), N_problems, true, weights);
@@ -141,6 +141,8 @@ else
 end
 
 fprintf('Largerst problem: n_var = %d, n_comp = %d \n',max(n_x_vec+2*n_y_vec), max(n_y_vec))
+fprintf('Dense problems (with n_comp < n_comp_min) : %d \n',sum(n_y_vec<=n_comp_min))
+
 n_comp_max = max(n_y_vec);
 
 % range for feasible points
@@ -202,6 +204,18 @@ for kk = 1:length(objective_functions)
         % store dimensions:
         n_var_vec = [n_var_vec, n];
         n_comp_vec = [n_comp_vec, n_comp];
+
+        % Addaptivity:
+        if settings.nnz_bounded_by_dim && settings.adaptive_density_bounds
+            if n_y > settings.n_comp_min
+                inv_cond_num = 1e0;
+            else
+                inv_cond_num = settings.inv_cond_num;
+            end
+        end
+                
+
+
         % Define symbolic variables:
         if isequal(casadi_variable_type,'SX')
             x = SX.sym('x', n_x);
@@ -726,11 +740,13 @@ for kk = 1:length(objective_functions)
                     s_density_A = nnz_factor*n_ineq/(n_x*n_ineq);
                 end
             end
+            
             if isempty(inv_cond_num)
                 A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A);
             else
                 A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A,inv_cond_num);
             end
+            
     
             A(A~=0) = range_A(1)+A(A~=0);
             A = round(A,n_digits_data);
@@ -741,6 +757,7 @@ for kk = 1:length(objective_functions)
                         s_density_B = nnz_factor*n_ineq/(n_y*n_ineq);
                     end
                 end
+                
                 if isempty(inv_cond_num)
                     B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,s_density_B);
                 else

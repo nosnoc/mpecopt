@@ -32,7 +32,7 @@ settings.objective_functions_all = {'Quadratic_psd','Quadratic_ind',...
     };
 
 
-settings.objective_functions = {settings.objective_functions_all{1}};
+settings.objective_functions = {settings.objective_functions_all{24}};
 
 % settings.objective_functions = {'Himmelblau'};
 
@@ -54,15 +54,16 @@ settings.s_density_M = 0.1;
 
 settings.nnz_bounded_by_dim = 1;
 settings.inv_cond_num = [];
-settings.nnz_factor = 3.00;
+settings.nnz_factor = 1.02;
+settings.n_comp_min = 1401;
 
 % settings.inv_cond_num = 1e0;
 % settings.nnz_factor = 1.00;
 %% 
 
-settings.adaptive_density_bounds = 0; % to account for very larg problems
+settings.adaptive_density_bounds = 1; % to account for very larg problems
 settings.variable_density = 1;
-settings.range_s_density = [0.01 0.1];
+settings.range_s_density = [0.01 0.05];
 settings.random_problem_sizes = 1;
 
 settings.n_ineq_ub = 2; % n_ineq = n_ineq_ub*n_x % max relative number of ineq w.r.t x
@@ -71,12 +72,12 @@ settings.n_ineq_lb = 0.5;
 settings.n_fraction_of_x = 0.5;
 
 dimensions.N_rand_prob = 1; % number of problems per objective
-% settings.n_comp_min = 250;
-dimensions.n_x_max = 2000;
-dimensions.n_x_min = 2000;
 
-% dimensions.n_x_max = 100;
-% dimensions.n_x_min = 100;
+dimensions.n_x_max = 1000;
+dimensions.n_x_min = 1000;
+
+dimensions.n_x_max = 100;
+dimensions.n_x_min = 100;
 
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
@@ -125,8 +126,8 @@ opts.use_one_nlp_solver = true;
 opts.problem_in_vertical_from = true;
 opts.settings_casadi_nlp.ipopt.print_level = 0;
 % opts.rho_TR_phase_ii_init = 1e-1;
-opts.settings_lpec.stop_lpec_at_feasible = true;
-opts.settings_lpec.stop_lpec_at_descent = true;
+% opts.settings_lpec.stop_lpec_at_feasible = true;
+% opts.settings_lpec.stop_lpec_at_descent = true;
 
 
 % solver_settings.settings_casadi_nlp.ipopt.max_iter = 100;
