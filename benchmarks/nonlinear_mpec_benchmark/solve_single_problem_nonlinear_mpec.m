@@ -32,7 +32,7 @@ settings.objective_functions_all = {'Quadratic_psd','Quadratic_ind',...
     };
 
 
-settings.objective_functions = {settings.objective_functions_all{24}};
+settings.objective_functions = {settings.objective_functions_all{14}};
 
 % settings.objective_functions = {'Himmelblau'};
 
@@ -44,6 +44,7 @@ settings.use_normal_distributions_for_feasible_point = 1;
 settings.alpha_lin = 10; % f + alpha_lin*[c;d]'*[x;y]'
 settings.n_non_zero_E = 2000;
 settings.symmetric_psd_M_matrix = 0;
+settings.sparsity_as_hessian = 1;
 
 settings.s_density_A_B = 0.1; % all same or change
 settings.s_density_M = 0.5;
@@ -61,7 +62,7 @@ settings.n_comp_min = 1401;
 % settings.nnz_factor = 1.00;
 %% 
 
-settings.adaptive_density_bounds = 1; % to account for very larg problems
+settings.adaptive_density_bounds = 0; % to account for very larg problems
 settings.variable_density = 1;
 settings.range_s_density = [0.01 0.05];
 settings.random_problem_sizes = 1;
@@ -73,12 +74,15 @@ settings.n_fraction_of_x = 0.5;
 
 dimensions.N_rand_prob = 1; % number of problems per objective
 
+
 dimensions.n_x_max = 1000;
 dimensions.n_x_min = 1000;
 
-dimensions.n_x_max = 100;
-dimensions.n_x_min = 100;
+dimensions.n_x_max = 700;
+dimensions.n_x_min = 700;
 
+settings.sparsity_as_hessian = 1;
+settings.nnz_factor = 3;
 
 dimensions.n_fraction_of_x = 0.5; % n_y = round(n_x/n_fraction_of_x)
 mpecs = generate_nonlinear_mpec_problem_set(problem_set_name,settings,dimensions);

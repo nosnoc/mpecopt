@@ -3,25 +3,53 @@ close all; clc;
 latexify_plot()
 % dtable;
 % lpec_dstruct;
+plot_cpu = false;
 
-S = load('random_lpecs2_07-Sep-2025_lpec_details');
-lpec_dstruct = S.lpec_dstruct;
-S = load('random_lpecs2_07-Sep-2025');
+% Large benchmark 
+if 1
+    S = load('nonlinear_mpec_large2_18-Sep-2025_lpec_details');
+    lpec_dstruct = S.lpec_dstruct;
+    S = load('nonlinear_mpec_large2_18-Sep-2025');
+    dtable = S.dtable;
+    solver_names = unique(dtable.solver_name);
+    solver = solver_names{3};
+    filename = 'nonlinear_optimal';
+    solver = solver_names{4};   
+    filename = 'nonlinear_early';
+
+    
+else
+    S = load('macmpec_general_14-Sep-2025_lpec_details');
+    lpec_dstruct = S.lpec_dstruct;
+    S = load('macmpec_general_14-Sep-2025');
+    dtable = S.dtable;
+    solver_names = unique(dtable.solver_name);
+    solver = solver_names{3};
+    filename = 'macmpec_optimal';
+    solver = solver_names{4}
+    filename = 'macmpec_early';
+
+    % S = load('macmpec_general_22-Sep-2025_lpec_details');
+    % lpec_dstruct = S.lpec_dstruct;
+    % S = load('macmpec_general_22-Sep-2025');
+    % dtable = S.dtable;
+
+    % solver_names = unique(dtable.solver_name);
+    % solver = solver_names{4};
+    % solver = solver_names{5};
+
+end
 %
 % S = load('nonlinear_mpec_med_15-Sep-2025_lpec_details');
 % lpec_dstruct = S.lpec_dstruct;
 % S = load('nonlinear_mpec_med_15-Sep-2025');
 
 
-dtable = S.dtable;
-
-plot_cpu = false;
-% Filter by solver and success
+% dtable = S.dtable;
 
 % solver_names  = ["Gurobi", "Gurobi-early-I", "Gurobi-early-I-II", "Highs", "Highs-early"];
-solver_names = unique(dtable.solver_name);
 
-solver = solver_names{3}
+
 idx = (dtable.solver_name == solver) & dtable.success == 1;
 
 fields = fieldnames(lpec_dstruct);
@@ -94,10 +122,10 @@ subplot(1,2,1)
 if log_plot
     h1 = histogram(log2(nc_i), 'BinMethod', 'integers');
     min_pow = floor(min(log2(nc_i)));
-    max_pow = max(5,ceil(max(log2(nc_i))));
+    max_pow = max(8,ceil(max(log2(nc_i))));
     set(gca, 'XTick', min_pow:max_pow)
     set(gca, 'XTickLabel', arrayfun(@(x) sprintf('$2^{%g}$', x), min_pow:max_pow, 'UniformOutput', false))
-    if numel(unique(nc_ii)) == 1
+    if numel(unique(nc_i)) == 1
         xlim([-1 max_pow]);
     end
 else
@@ -105,8 +133,9 @@ else
 end
 
 % Set ticks manually based on your data range
-title('Nodecount Phase I - each LPEC call');
+title('Nodecount Phase I');
 xlabel('Nodes'); ylabel('Frequency'); grid on;
+set(gca,'FontSize',13)
 xticks = get(gca, 'XTick');
 % annotate counts
 for k = 1:numel(h1.BinEdges)-1
@@ -121,6 +150,7 @@ ymax1 = max(h1.Values);
 ylim([0 ymax1 + max(2,ceil(0.2*ymax1))])
 % xlim([0 100])
 
+% exportgraphics(gca, [filename '_phase_i.pdf']);
 % --- Phase II ---
 subplot(1,2,2)
 if log_plot
@@ -140,8 +170,11 @@ else
         xlim([0 10])
     end
 end
-title('Nodecount Phase II - each LPEC call');
-xlabel('Nodes'); ylabel('Frequency'); grid on;
+title('Nodecount Phase II');
+xlabel('Nodes'); 
+% ylabel('Frequency'); 
+grid on;
+set(gca,'FontSize',13)
 
 
 % annotate counts
@@ -156,6 +189,8 @@ end
 % adjust ylim
 ymax2 = max(h2.Values);
 ylim([0 ymax2 + max(2,ceil(0.2*ymax2))])
+% exportgraphics(gca, [filename '_phase_i.pdf']);
+exportgraphics(gcf, [filename '.pdf']);
 
 %%
 % xticks(min(nc_ii):max(nc_ii));

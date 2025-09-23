@@ -61,12 +61,17 @@ if ~isfield(settings,'nnz_factor')
     nnz_factor = 1;
 end
 
+if ~isfield(settings,'sparsity_as_hessian')
+    % if bound by nnz, but use hessian sparsiy instead;
+    sparsity_as_hessian = 0;
+end
+
 
 if ~isfield(settings,'casadi_variable_type')
     casadi_variable_type = 'SX'; % default;
 else
     if ~ismember(settings.casadi_variable_type,{'SX','MX'})
-        error('casadi_variable_type must be = ''SX'' or ''MX'' ') 
+        error('casadi_variable_type must be = ''SX'' or ''MX'' ')
     end
 end
 
@@ -98,17 +103,17 @@ if settings.random_problem_sizes
 
     N_per_problem = N_rand_prob;
     if 1
-    figure
-    n_var = n_x_vec+2*n_y_vec; % total num of vars, non comp, comp1 + comp2 + lift
-    scatter(n_var,n_ineq_vec*(1+settings.s_ineq_copy));
-    hold on
-    scatter(n_var,n_x_vec);
-    hold on
-    scatter(n_var,n_y_vec);
-    xlabel('$n+2m$ - number of variables')
-    ylabel('Number of constraints')
-    legend({'Inequality constraints','Equality constraints', 'Comp. constraints'},'Location','northwest')
-    axis equal
+        figure
+        n_var = n_x_vec+2*n_y_vec; % total num of vars, non comp, comp1 + comp2 + lift
+        scatter(n_var,n_ineq_vec*(1+settings.s_ineq_copy));
+        hold on
+        scatter(n_var,n_x_vec);
+        hold on
+        scatter(n_var,n_y_vec);
+        xlabel('$n+2m$ - number of variables')
+        ylabel('Number of constraints')
+        legend({'Inequality constraints','Equality constraints', 'Comp. constraints'},'Location','northwest')
+        axis equal
     end
     % subplot(122)
     % scatter(n_var,n_y_vec);
@@ -207,13 +212,19 @@ for kk = 1:length(objective_functions)
 
         % Addaptivity:
         if settings.nnz_bounded_by_dim && settings.adaptive_density_bounds
+
             if n_y > settings.n_comp_min
-                inv_cond_num = 1e0;
+                if sparsity_as_hessian
+                    inv_cond_num = settings.inv_cond_num;
+                else
+                    inv_cond_num = 1e0;
+
+                end
             else
                 inv_cond_num = settings.inv_cond_num;
             end
         end
-                
+
 
 
         % Define symbolic variables:
@@ -285,7 +296,7 @@ for kk = 1:length(objective_functions)
                 % Quadratic
                 % ... generate sparse Hessian matrix H (and make sure it it psd if needed)
                 % Quadratic
-                if nnz_bounded_by_dim 
+                if nnz_bounded_by_dim
                     if adaptive_density_bounds
                         H  = full( sprandsym(n_obj, s_density_A_B) );     % for smaller matrices use provided density bounds, for larger use sparse
                     else
@@ -296,7 +307,7 @@ for kk = 1:length(objective_functions)
                         end
                     end
                 else
-                    H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing    
+                    H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing
                 end
                 H  = round( H , n_digits_data);                        % ... round matrix to nDigits
                 min_eig = max( 0, -min( eig( H ) - eps_prec) );  % ... -epsPrec to ensure H is p.s.d.
@@ -312,7 +323,7 @@ for kk = 1:length(objective_functions)
                         H  = full( sprandsym(n_obj, n_obj/n_obj.^2,inv_cond_num) );               % ... full matrix for easier printing
                     end
                 else
-                    H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing    
+                    H  = full( sprandsym(n_obj, s_density_A_B) );               % ... full matrix for easier printing
                 end
                 H  = round( H , n_digits_data);
                 grad_vec  = round( range_grad(1) + rand(n_obj,1) * (range_grad(2) - range_grad(1)) , n_digits );
@@ -564,7 +575,7 @@ for kk = 1:length(objective_functions)
 
 
             case 'CURLY10'
-                 if n_obj > 10
+                if n_obj > 10
                     k = 10;
                 else
                     k = n_obj;
@@ -731,23 +742,44 @@ for kk = 1:length(objective_functions)
 
         f = f*1e-3; % alliviate bad scaling
 
+                % compute hessian sparsity
+        if sparsity_as_hessian
+            H = hessian(f,v);         % Hessian
+            % H_fun = Function('Hess',{v},{H});
+            % S = full(H_fun(rand(size(v))));
+            S = sparsity(H);          % sparsity pattern
+            nnz_entries   = nnz(S);       % number of nonzeros
+            total_entries = numel(S);     % total number of entries
+            s_density_H   = nnz_factor*nnz_entries/total_entries;
+        end
+
+
         % Generate problem matrices
         if settings.inequality_constraints
             % Ax + By >= f
             s_density_A = s_density_A_B;
-            if settings.nnz_bounded_by_dim 
+            if settings.nnz_bounded_by_dim
                 if ~(n_comp <= n_comp_min && adaptive_density_bounds)
                     s_density_A = nnz_factor*n_ineq/(n_x*n_ineq);
                 end
             end
-            
+
+
+            if sparsity_as_hessian
+                if (n_comp > n_comp_min && adaptive_density_bounds)
+                    s_density_A = s_density_H;
+                elseif ~adaptive_density_bounds
+                    s_density_A = s_density_H;
+                end
+            end
+
             if isempty(inv_cond_num)
                 A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A);
             else
                 A = (range_A(2)-range_A(1))*sprand(n_ineq,n_x,s_density_A,inv_cond_num);
             end
-            
-    
+
+
             A(A~=0) = range_A(1)+A(A~=0);
             A = round(A,n_digits_data);
             if settings.inequality_constraints_coupling_terms
@@ -757,7 +789,15 @@ for kk = 1:length(objective_functions)
                         s_density_B = nnz_factor*n_ineq/(n_y*n_ineq);
                     end
                 end
-                
+
+                if sparsity_as_hessian
+                    if (n_comp > n_comp_min && adaptive_density_bounds)
+                        s_density_B = s_density_H;
+                    elseif ~adaptive_density_bounds
+                        s_density_B = s_density_H;
+                    end
+                end
+
                 if isempty(inv_cond_num)
                     B = (range_B(2)-range_B(1))*sprand(n_ineq,n_y,s_density_B);
                 else
@@ -776,8 +816,6 @@ for kk = 1:length(objective_functions)
             r = r-1;
         end
 
-         
-         
         % s_density_M = (n_non_zero_E-n_y)/n_y^2;
         if settings.variable_density
             % s_density_M = range_s_density(1)+(range_s_density(2)-range_s_density(1)).*rand(1);
@@ -787,11 +825,16 @@ for kk = 1:length(objective_functions)
                 if ~(n_comp <= n_comp_min && adaptive_density_bounds)
                     s_density_M = nnz_factor*min(r,n_non_zero_E)/(n_y*n_ineq);
                 end
+                if sparsity_as_hessian && (n_comp > n_comp_min && adaptive_density_bounds)
+                    s_density_M = max(s_density_H,nnz_factor*(n_non_zero_E)/(n_y*n_ineq));
+                elseif sparsity_as_hessian
+                    s_density_M = s_density_H;
+                end
             end
         else
             s_density_M = settings.s_density_M;
-        
         end
+
         if isempty(inv_cond_num)
             E = (range_E(2)-range_E(1))*sprand(r,n_y-r,s_density_M);
         else
@@ -821,9 +864,19 @@ for kk = 1:length(objective_functions)
         % N = sprand(n_y,n_x,s_density);
         % r = a + (b-a).*rand(100,1);
         s_density_N = s_density_A_B;
+
+
         if settings.nnz_bounded_by_dim
             if ~(n_comp <= n_comp_min && adaptive_density_bounds)
                 s_density_N = nnz_factor*n_y/(n_x*n_y);
+            end
+        end
+
+        if sparsity_as_hessian
+            if (n_comp > n_comp_min && adaptive_density_bounds)
+                s_density_N = s_density_H;
+            elseif ~adaptive_density_bounds
+                s_density_N = s_density_H;
             end
         end
         if isempty(inv_cond_num)
