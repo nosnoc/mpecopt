@@ -12,7 +12,7 @@ w = [x1;x2;x3];
 % parameter
 p = SX.sym('p'); 
 % objective
-f = x1+x2-p*x3;
+f = x1^2+x2^2-p*x3;
 
 % inital guess
 x0 = ones(3,1);
@@ -47,10 +47,10 @@ f_opt_homotopy = full(result_homotopy.f);
 % Solver settings
 solver_settings = mpecopt.Options();
 % change some settings
-solver_settings.settings_lpec.lpec_solver = 'Gurobi'  ; % 'Gurobi'; for best perfomance; 'Highs_casadi' - via CasADi conic
-solver_settings.settings_casadi_nlp.ipopt.linear_solver = 'ma27'; % 'ma27' for better perfomance
+solver_settings.settings_lpec.lpec_solver = 'Highs'  ; % 'Gurobi'; for best perfomance; 'Highs_casadi' - via CasADi conic
+solver_settings.settings_casadi_nlp.ipopt.linear_solver = 'mumps'; % 'ma27' for better perfomance
 solver_settings.rho_TR_phase_i_init = 1e1;
-solver_settings.rho_TR_phase_ii_init = 1e-2;
+solver_settings.rho_TR_phase_ii_init = 1e-6;
 
 
 % Call solver
