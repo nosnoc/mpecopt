@@ -119,7 +119,7 @@ classdef Options < handle
         function obj = Options()
             obj.settings_lpec = LPECSolverOptions();
             % obj.settings_lpec.solver_name = 'lpec_solver';
-            % obj.settings_lpec.lpec_solver= LpecSolver.Gurobi;
+            obj.settings_lpec.lpec_solver= LpecSolver.Highs;
             % obj.settings_lpec.max_nodes = 2e3;
             obj.settings_lpec.stop_lpec_at_feasible = false; % Stop at a feasible point in Phase I lpecs (sufficent for pogress)
             obj.settings_lpec.stop_lpec_at_descent = false; % Stop at descent direction in Phase II lepcs (sufficent for pogress) (supported only for gurobi atm)
@@ -149,7 +149,7 @@ classdef Options < handle
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_push = 1e-6;
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_frac = 1e-6;
             % obj.settings_casadi_nlp.ipopt.warm_start_entire_iterate = 'yes';
-            obj.settings_casadi_nlp.ipopt.linear_solver = 'ma27'; % mumps, ma27, ma57
+            obj.settings_casadi_nlp.ipopt.linear_solver = 'mumps'; % mumps, ma27, ma57
             % obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'relax_bounds';  % make_parameter  make_constraint relax_bounds
             obj.settings_casadi_nlp.detect_simple_bounds = true;
             obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'make_parameter';  % make_parameter  make_constraint relax_bounds
