@@ -4,8 +4,8 @@ import casadi.*
 
 %% Color order
 
-results_name = ['results/macmpec_general_' datestr(datetime("today"))]; % name for matlab .dat with results
-filename = 'macmpec_general'; % name for figures and excel table
+results_name = ['results/macmpec_lpec_' datestr(datetime("today"))]; % name for matlab .dat with results
+filename = 'macmpec_lpec'; % name for figures and excel table
 
 %% Load macmpec
 macmpec_json = dir('macMPEC/*.json');
@@ -46,73 +46,50 @@ end
 
 % N_interesting = [];
 % for ii=1:length(macmpec_json)
-%     if mpecs(ii).n_w <= 100
+%     if mpecs(ii).n_w <= 400 && mpecs(ii).n_w > 100
 %         N_interesting = [N_interesting; ii];
 %     end
 % end
-
 % mpecs = mpecs(N_interesting);
 
 
 %% Define list of solvers to use
-solver_names  = ["MPECopt-Reg-Gurobi", "MPECopt-$\ell_{\infty}$-Gurobi", "MPECopt-Reg-Guroby-ET", ...
-                  "Reg", "NLP", "$\ell_{\infty}$",...
-                  "MINLP"];
+solver_names  = ["Gurobi", "Gurobi-early", "Highs", "Highs-early"];
 
-solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,...
-                    @mpec_homotopy_solver,@mpec_homotopy_solver,@mpec_homotopy_solver, ...
-                    @mpec_minlp_solver};
+solver_functions = {@mpec_optimizer,@mpec_optimizer,@mpec_optimizer,@mpec_optimizer};
 
 opts1 = mpecopt.Options();
 opts1.solver_name = solver_names{1};
 opts1.settings_lpec.lpec_solver = "Gurobi";
 opts1.relax_and_project_homotopy_parameter_steering = "Direct";
-opts1.use_one_nlp_solver = false;
-% opts1.initialization_strategy = "FeasibilityEll1General";
+opts1.settings_lpec.stop_lpec_at_feasible = false;
 
 
 opts2 = mpecopt.Options();
 opts2.solver_name = solver_names{2};
 opts2.settings_lpec.lpec_solver = "Gurobi";
-opts2.relax_and_project_homotopy_parameter_steering = "Ell_inf";
-opts2.use_one_nlp_solver = false;
-% opts2.settings_lpec.stop_lpec_at_feasible = true;
-% opts2.rho_TR_phase_i_init = 1e-3;
+opts2.relax_and_project_homotopy_parameter_steering = "Direct";
+opts2.settings_lpec.stop_lpec_at_feasible = true;
 
 
 opts3 = mpecopt.Options();
 opts3.solver_name = solver_names{3};
-opts3.settings_lpec.lpec_solver = "Gurobi";
+opts3.settings_lpec.lpec_solver = "Highs_casadi";
 opts3.relax_and_project_homotopy_parameter_steering = "Direct";
-opts3.use_one_nlp_solver = false;
-opts3.settings_lpec.stop_lpec_at_feasible = true;
-opts3.settings_lpec.stop_lpec_at_descent = true;
-opts3.consider_all_complementarities_in_lpec = true;
+opts3.settings_lpec.stop_lpec_at_feasible = false;
 
-scholtes_opts1 = HomotopySolverOptions();
-scholtes_opts1.homotopy_parameter_steering = 'Direct';
 
-scholtes_opts2 = HomotopySolverOptions();
-scholtes_opts2.homotopy_parameter_steering = 'Direct';
-scholtes_opts2.max_iter = 1;
-scholtes_opts2.sigma0 = 0;
+opts4 = mpecopt.Options();
+opts4.solver_name = solver_names{4};
+opts4.settings_lpec.lpec_solver = "Highs_casadi";
+opts4.relax_and_project_homotopy_parameter_steering = "Direct";
+opts4.settings_lpec.stop_lpec_at_feasible = true;
 
-scholtes_opts3 = HomotopySolverOptions();
-scholtes_opts3.homotopy_parameter_steering = 'Ell_inf';
-
-minlp_opts = MINLPSolverOptions();
-minlp_opts.settings_casadi_nlp.bonmin.time_limit = 600;
-
-opts = {opts1, opts2, opts3, ...
-       scholtes_opts1, scholtes_opts2, scholtes_opts3,...
-       minlp_opts}; % list of options to pass to mpecsol (option structs)
+opts = {opts1, opts2, opts3, opts4}; % list of options to pass to mpecsol (option structs)
 
 
 %% Create data struct
-% N_experiments = [1, 3:6];
-N_experiments = [1:7];
-% N_experiments  = [2, 6];
-
+N_experiments = [1:2];
 mpec_benchmark_dtable_loop; % this script runs the experimetns, creates a dtable
 
 %%  Pick which results to plot
@@ -146,18 +123,18 @@ end
 %% Plot results  
 plot_settings.success_fail_statistics = 1;
 plot_settings.n_biactive = 0;
-plot_settings.lpecs_solved = 1;
+plot_settings.lpecs_solved = 0;
 plot_settings.active_set_changes = 0;
-plot_settings.lpecs_cpu_time = 0;
-plot_settings.bar_timing_plots = 0;
-plot_settings.nlps_solved = 1;
-plot_settings.max_nlp_cpu_time = 1;
+plot_settings.lpecs_cpu_time = 1;
+plot_settings.bar_timing_plots = 1;
+plot_settings.nlps_solved = 0;
+plot_settings.max_nlp_cpu_time = 0;
 plot_settings.max_nlp_cpu_time_phase_i = 0;
 plot_settings.max_nlp_cpu_time_phase_ii = 0;
-plot_settings.nlp_cpu_time = 1; % aggegated nlp times phase I and II
-plot_settings.nlp_lpec_cpu_comparisson = 0;
+plot_settings.nlp_cpu_time = 0; % aggegated nlp times phase I and II
+plot_settings.nlp_lpec_cpu_comparisson = 1;
 plot_settings.objective = 0;
-plot_settings.objective_rescaled = 1;
+plot_settings.objective_rescaled = 0;
 plot_settings.max_lpec_cpu_time = 0;
 
 plot_settings.relative = 1;
@@ -180,7 +157,7 @@ plot_settings.lpec_phases_cpu_time = 0;
 plot_settings.max_lpec_cpu_time = 0;
 plot_settings.stationary_points = 1;
 plot_settings.b_stationarity = 1;
-plot_settings.b_stationarty_as_success_criterion = 0;
+plot_settings.b_stationarty_as_success_criterion = 1;
 plot_settings.plot_only_sucessful = 1;
 plot_settings.bar_comparisson_plots = 0;
 

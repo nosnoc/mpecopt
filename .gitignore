@@ -28,6 +28,7 @@ qt_temp*
 *.glo
 *.acn
 *.acr
+*.txt
 *.alg
 *.glg
 *.gls

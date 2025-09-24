@@ -7,6 +7,7 @@ classdef Options < handle
         casadi_symbolic_mode {mustBeMember(casadi_symbolic_mode,{'casadi.SX', 'casadi.MX'})} = 'casadi.SX';
         comp_res_bilinear (1,1) logical = true;  % If true: comp_res = max(x1.*x2), if false: comp_res = max(min(x1,x2)); the bilinear shrinks faster, e.g. x1 = 1e-3,x2 = 1e-3, bilinear = 1e-6, std 1e-3;
         lift_complementarities_full (1,1) logical = false; % If true brute force lifting x1-G = 0, if false, detect which components of G are already purely scalar. Affine expressions get lifted.
+        problem_in_vertical_from (1,1) logical = false; % If true, it is assumed that complementarity constraints are given as 0 \leq x_1 \perp x_2 \geq 0, and automatic formulation is skipeed.
 
         %  --- Stopping criteria/tolernaces ---
         max_iter (1,1) double {mustBeInteger, mustBePositive} = 25;
@@ -15,7 +16,7 @@ classdef Options < handle
         tol (1,1) double {mustBeReal, mustBeNonnegative} = 1e-8;
         tol_B_stationarity (1,1) double {mustBeReal, mustBeNonnegative} = 1e-8;
         tol_feasibility (1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
-        tol_B_stationarity_early_term (1,1) double {mustBeReal, mustBeNonnegative} = 1e-7;
+        tol_B_stationarity_early_term (1,1) double {mustBeReal, mustBeNonnegative} = 5e-8;
         tol_active (1,1) double {mustBeReal, mustBeNonnegative} = 1e-9; % below this treshold a constaint is considered to be active
         
         rescale_large_objective_gradients (1,1) logical = true;
@@ -24,7 +25,8 @@ classdef Options < handle
         stop_if_S_stationary (1,1) logical = false; % S stationarity is sufficent for B
 
         % --- BNLP/TNLP settings----
-        piece_nlp_strategy PieceNLPStartegy = "BNLP_integer";
+        piece_nlp_strategy PieceNLPStartegy = "BNLP_integer"
+        use_one_nlp_solver (1,1) logical = false; % if true create only one NLP solver for phase i with reg, and phase ii for bnlp and tnlp check (but set sigma to inf) - saves lot of time for large problems; Option supportedo only for RelaxAndProject Phase I
 
         % Multiplier-based stationarity
         compute_tnlp_stationary_point (1,1) logical = true; % todo: reduce this and the one below settings to one
@@ -47,7 +49,7 @@ classdef Options < handle
         relax_and_project_tighter_TR (1,1) logical = false; % if true take the maximum as max(max(x1,x2)), otherwise take it as rho_TR_phase_i
         relax_and_project_sigma0 (1,1) double {mustBeReal, mustBeNonnegative} = 1;
         relax_and_project_kappa (1,1) double {mustBeReal, mustBeNonnegative} = 0.1;
-        relax_and_project_comp_tol (1,1) double {mustBeReal, mustBeNonnegative} = 1e-10;
+        relax_and_project_comp_tol (1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
         relax_and_project_comps_aggregated (1,1) logical = false;
         relax_and_project_consider_all_comps_in_lpec (1,1) logical = false;
         relax_and_project_homotopy_parameter_steering HomotopySteering = 'Direct';
@@ -117,9 +119,10 @@ classdef Options < handle
         function obj = Options()
             obj.settings_lpec = LPECSolverOptions();
             % obj.settings_lpec.solver_name = 'lpec_solver';
-            % obj.settings_lpec.lpec_solver= LpecSolver.Gurobi;
+            obj.settings_lpec.lpec_solver= LpecSolver.Highs;
             % obj.settings_lpec.max_nodes = 2e3;
-            obj.settings_lpec.stop_lpec_at_feasible = false;
+            obj.settings_lpec.stop_lpec_at_feasible = false; % Stop at a feasible point in Phase I lpecs (sufficent for pogress)
+            obj.settings_lpec.stop_lpec_at_descent = false; % Stop at descent direction in Phase II lepcs (sufficent for pogress) (supported only for gurobi atm)
             obj.settings_lpec.trust_region_on_slacks = false; % trust region for slack variables in fesability problem;
             % obj.settings_lpec.rel_tol= 1e-6;
             % obj.settings_lpec.abs_tol= 1e-8;
@@ -132,7 +135,7 @@ classdef Options < handle
             obj.settings_casadi_nlp.ipopt.max_iter = 3000;
             obj.settings_casadi_nlp.ipopt.bound_relax_factor = 0;
             % obj.settings_casadi_nlp.ipopt.bound_relax_factor = 1e-16;
-            % obj.settings_casadi_nlp.ipopt.honor_original_bounds = 'yes';
+            obj.settings_casadi_nlp.ipopt.honor_original_bounds = 'yes';
             obj.settings_casadi_nlp.ipopt.tol = default_tol;
             obj.settings_casadi_nlp.ipopt.dual_inf_tol = default_tol;
             obj.settings_casadi_nlp.ipopt.dual_inf_tol = default_tol;
@@ -145,8 +148,10 @@ classdef Options < handle
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_frac = 1e-15;
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_push = 1e-6;
             % obj.settings_casadi_nlp.ipopt.warm_start_bound_frac = 1e-6;
-            obj.settings_casadi_nlp.ipopt.warm_start_entire_iterate = 'yes';
+            % obj.settings_casadi_nlp.ipopt.warm_start_entire_iterate = 'yes';
             obj.settings_casadi_nlp.ipopt.linear_solver = 'mumps'; % mumps, ma27, ma57
+            % obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'relax_bounds';  % make_parameter  make_constraint relax_bounds
+            obj.settings_casadi_nlp.detect_simple_bounds = true;
             obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'make_parameter';  % make_parameter  make_constraint relax_bounds
             
             % obj.opts_casadi_nlp.snopt = struct();

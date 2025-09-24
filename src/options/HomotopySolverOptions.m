@@ -5,11 +5,13 @@ classdef HomotopySolverOptions < handle
         solver_name {mustBeTextScalar} = 'mpec_homotopy';
         casadi_symbolic_mode {mustBeMember(casadi_symbolic_mode,{'casadi.SX', 'casadi.MX'})} = 'casadi.SX';
         comp_res_bilinear(1,1) logical = true;  % if true comp_res = max(x1.*x2), if false, comp_res = max(min(x1,x2)); the bliniear shrinks faster, e.g. x1 = 1e-3,x2 = 1e-3, bilinear = 1e-6, std 1e-3;
+        problem_in_vertical_from (1,1) logical = false; % If true, it is assumed that complementarity constraints are given as 0 \leq x_1 \perp x_2 \geq 0, and automatic formulation is skipeed.
+
 
         % Stopping criteria/tolernaces
         max_iter(1,1) double {mustBeInteger, mustBePositive} = 15;
         tol(1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
-        tol_active(1,1) double {mustBeReal, mustBeNonnegative} = 1e-9; % below this treshold a constraint is considered to be active
+        tol_active(1,1) double {mustBeReal, mustBeNonnegative} = 1e-10; % below this treshold a constraint is considered to be active
         comp_tol(1,1) double {mustBeReal, mustBeNonnegative} = 1e-9;
         plot_mpec_multipliers(1,1) logical = false;
         initial_comp_all_zero(1,1) logical = false;
@@ -63,6 +65,11 @@ classdef HomotopySolverOptions < handle
             obj.settings_casadi_nlp.ipopt.warm_start_init_point = 'yes';
             obj.settings_casadi_nlp.ipopt.warm_start_entire_iterate = 'yes';
             obj.settings_casadi_nlp.ipopt.linear_solver = 'ma27'; % 'mumps'; ma57
+            obj.settings_casadi_nlp.detect_simple_bounds = true;
+            obj.settings_casadi_nlp.ipopt.max_wall_time = 600;
+            
+            % obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'relax_bounds';  % make_parameter  make_constraint relax_bounds
+            obj.settings_casadi_nlp.ipopt.fixed_variable_treatment  = 'make_parameter';
             % obj.opts_casadi_nlp.snopt = struct();
             % obj.opts_casadi_nlp.worhp = struct();
             % obj.opts_casadi_nlp.uno = struct();

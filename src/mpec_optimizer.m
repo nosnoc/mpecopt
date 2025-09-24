@@ -1,4 +1,6 @@
 function [solution,stats] = mpec_optimizer(mpec,solver_initalization,settings)
+warning("This is the legacy version of the solver!")
+warning("Use the updated version by creating a solver object: solver = mpecopt.Solver(mpec, solver_settings); [result_mpecopt,stats_mpecopt] = solver.solve(solver_initalization);")
 %%
 % MPEC Opt - a globally convergent method for computing B-stationary
 % point of MPECs.

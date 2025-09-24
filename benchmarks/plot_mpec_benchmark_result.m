@@ -157,7 +157,8 @@ if settings.absolute
     ylim([0, 1.0]);
     ax.LineStyleCyclingMethod = line_style_cycling_method;
     hold off;
-    legend('Location', 'southeast')
+    % legend('Location', 'southeast')
+    legend('Location', 'east')
     % grid on;
     if settings.save_plot
         exportgraphics(gca, [filename '_absolute.pdf']);
@@ -190,6 +191,7 @@ if settings.absolute_phase_i
     ax.LineStyleCyclingMethod = line_style_cycling_method;
     hold off;
     legend('Location', 'southeast')
+    
     % grid on;
     if settings.save_plot
         exportgraphics(gca, [filename '_absolute_phase_i.pdf']);
@@ -294,7 +296,8 @@ if settings.relative
     ax.LineStyleCyclingMethod = line_style_cycling_method;
     hold off;
     % grid on;
-    legend('Location', 'southeast');
+    % legend('Location', 'southeast');
+    legend('Location', 'east');
     if settings.save_plot
         exportgraphics(gca, [filename '_relative.pdf']);
     end

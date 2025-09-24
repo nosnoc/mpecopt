@@ -9,8 +9,8 @@ clear all; clc; close all
 import casadi.*
 
 %% Problem formulation
-n = 25; % number of variabples
-m = 10;
+n = 150; % number of variabples
+m = 100;
 A = rand(m,n);
 b = rand(m,1);
 c = 1-2*rand(n,1);
@@ -51,18 +51,15 @@ solver_settings = mpecopt.Options();
 % solver_settings.settings_lpec.lpec_solver = "Highs_casadi";
 solver_settings.settings_lpec.lpec_solver = "Gurobi";
 % solver_settings.rho_TR_phase_i_init = 1e-1;
-% solver_settings.rho_TR_phase_ii_init = 1e-1;
-% solver_settings.relax_and_project_homotopy_parameter_steering = "Direct";
-% solver_settings.initialization_strategy = "FeasibilityEllInfGeneral";
+solver_settings.rho_TR_phase_ii_init = 1e-5;
+solver_settings.settings_lpec.stop_lpec_at_feasible = 1;
+solver_settings.settings_lpec.stop_lpec_at_descent = 1;
+
 
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
 solver = mpecopt.Solver(mpec, solver_settings);
 [result_active_set,stats_active_set] = solver.solve(solver_initalization);
 
-%
-solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
-% solver = mpecopt.Solver(mpec, solver_settings);
 
 %%
 w_opt_active_set = full(result_active_set.x);

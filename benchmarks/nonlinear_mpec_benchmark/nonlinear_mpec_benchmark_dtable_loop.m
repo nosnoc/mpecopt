@@ -31,6 +31,19 @@ dstruct.max_cpu_time_lpec = [];
 dstruct.problem_infeasible = [];
 dstruct.f_lpec = [];
 
+%% Lpec details
+lpec_dstruct = struct;
+lpec_dstruct.solver_name = [];
+lpec_dstruct.nodecount_phase_i = {};
+lpec_dstruct.nodecount_phase_ii= {};
+lpec_dstruct.baritercount_phase_i = {};
+lpec_dstruct.baritercount_phase_ii= {};
+lpec_dstruct.itercount_phase_i = {};
+lpec_dstruct.itercount_phase_ii= {};
+lpec_dstruct.cpu_time_lpec_phase_i = {};
+lpec_dstruct.cpu_time_lpec_phase_ii = {};
+
+
 % dstruct.solver_message = [;]
 dstruct.prob_num = [];
 dstruct.f = [];
@@ -46,10 +59,15 @@ for ii = N_experiments
     options = opts{ii};
     j = 1;
     total_success = 0;
+    % log current problem
+    % fid = fopen('current_problem.txt','w');
+    % fprintf(fid,'%s\n\n',name);
+    % fclose(fid);
+    t_current_exp = tic;
     for jj = n_mpecs
         mpec = mpecs(jj);
         w = mpec.w;
-        f = mpec.f_fun(mpec.w);
+        f = mpec.f_fun(mpec.w); % alliviate bad scaling of random problems
         g = mpec.g_fun(mpec.w);
         G = mpec.G_fun(mpec.w);
         H = mpec.H_fun(mpec.w);
@@ -62,10 +80,27 @@ for ii = N_experiments
     
         disp([ num2str(jj) '/' num2str(length(mpecs)) ': ' 'solving ' char(mpec.name) ' with solver ' char(name)]);
         fprintf('Problem info:name = %s, n_w = %d, n_g = %d, n_comp = %d\n',name, length(w),length(g),length(G))
+
+        % log current problem
+        fid = fopen('current_problem.txt','w');
+        fprintf(fid,'%s\n',mpec.name);
+        fclose(fid);
+
         mpec_struct = struct('x',w,'f',f,'g',g,'G',G,'H',H);
         solver_initalization = struct('x0', w0, 'lbx',lbw, 'ubx',ubw,'lbg',lbg,'ubg',ubg);
+        fprintf(['Current problem solution started at: ' datestr(now) '.\n'])
         % to add non-mpecsol solver you can add ifs here
-        [result,stats] = solver_functions{ii}(mpec_struct,solver_initalization,options);
+        if isequal(solver_functions{ii},@mpec_optimizer)
+            solver = mpecopt.Solver(mpec_struct, options);
+            [result,stats] = solver.solve(solver_initalization);
+        else
+            [result,stats] = solver_functions{ii}(mpec_struct,solver_initalization,options);
+        end
+        fprintf(['Current problem solution ended at: ' datestr(now) '.\n'])
+
+        % if stats.success~=1
+        %     keyboard;
+        % end
 
         dstruct.solver_name = [dstruct.solver_name; string(name)];
         dstruct.problem_name = [dstruct.problem_name; string(mpec_name)];
@@ -77,8 +112,10 @@ for ii = N_experiments
         dstruct.n_lpec_total = [dstruct.n_lpec_total; stats.n_lpec_total];
 
         dstruct.max_cpu_time_nlp = [dstruct.max_cpu_time_nlp; max([stats.iter.cpu_time_nlp_phase_i_iter(:);stats.iter.cpu_time_nlp_phase_ii_iter(:)])];
-        dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max(stats.iter.cpu_time_nlp_phase_i_iter)];
-        dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max(stats.iter.cpu_time_nlp_phase_ii_iter)];
+        % dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max(stats.iter.cpu_time_nlp_phase_i_iter)];
+        % dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max(stats.iter.cpu_time_nlp_phase_ii_iter)];
+        dstruct.max_cpu_time_nlp_phase_i = [dstruct.max_cpu_time_nlp_phase_i; max([stats.iter.cpu_time_nlp_phase_i_iter;0])];
+        dstruct.max_cpu_time_nlp_phase_ii = [dstruct.max_cpu_time_nlp_phase_ii; max([stats.iter.cpu_time_nlp_phase_ii_iter,0])];
         dstruct.cpu_time = [dstruct.cpu_time; stats.cpu_time_total];
         dstruct.cpu_time_phase_i = [dstruct.cpu_time_phase_i; stats.cpu_time_phase_i];
         dstruct.cpu_time_phase_ii = [dstruct.cpu_time_phase_ii; stats.cpu_time_phase_ii];
@@ -87,11 +124,22 @@ for ii = N_experiments
         dstruct.cpu_time_nlp_phase_i = [dstruct.cpu_time_nlp_phase_i; stats.cpu_time_nlp_phase_i];
         dstruct.cpu_time_nlp_phase_ii = [dstruct.cpu_time_nlp_phase_ii; stats.cpu_time_nlp_phase_ii];
 
-        dstruct.max_cpu_time_lpec = [dstruct.max_cpu_time_lpec; max([stats.iter.cpu_time_lpec_phase_i_iter';stats.iter.cpu_time_lpec_phase_ii_iter'])];
+        dstruct.max_cpu_time_lpec = [dstruct.max_cpu_time_lpec; max([stats.iter.cpu_time_lpec_phase_i_iter';stats.iter.cpu_time_lpec_phase_ii_iter';0])];
         dstruct.cpu_time_lpec = [dstruct.cpu_time_lpec; stats.cpu_time_lpec];
         dstruct.cpu_time_lpec_phase_i = [dstruct.cpu_time_lpec_phase_i; stats.cpu_time_lpec_phase_i];
         dstruct.cpu_time_lpec_phase_ii = [dstruct.cpu_time_lpec_phase_ii; stats.cpu_time_lpec_phase_ii];       
-        
+
+        % detailed lpec statistis
+        lpec_dstruct.solver_name = [lpec_dstruct.solver_name; string(name)];
+        lpec_dstruct.nodecount_phase_i{end+1}   = stats.iter.nodecount_phase_i;
+        lpec_dstruct.nodecount_phase_ii{end+1}  = stats.iter.nodecount_phase_ii;
+        lpec_dstruct.baritercount_phase_i{end+1}  = stats.iter.baritercount_phase_i;
+        lpec_dstruct.baritercount_phase_ii{end+1} = stats.iter.baritercount_phase_ii;
+        lpec_dstruct.itercount_phase_i{end+1}   = stats.iter.itercount_phase_i;
+        lpec_dstruct.itercount_phase_ii{end+1}  = stats.iter.itercount_phase_ii;
+        lpec_dstruct.cpu_time_lpec_phase_i{end+1}   = stats.iter.cpu_time_lpec_phase_i_iter;
+        lpec_dstruct.cpu_time_lpec_phase_ii{end+1}  = stats.iter.cpu_time_lpec_phase_ii_iter;
+
         dstruct.n_biactive = [dstruct.n_biactive; stats.n_biactive];
         dstruct.f_lpec = [dstruct.f_lpec; stats.f_lpec];
 
@@ -107,6 +155,7 @@ for ii = N_experiments
         dstruct.multiplier_based_stationarity  = [dstruct.multiplier_based_stationarity; stats.multiplier_based_stationarity];
         % j = j+1;
         total_success = total_success+stats.success;
+        
         fprintf(['success rate so far (%d of %d) or %2.2f precent \n\n'],total_success,jj,100*total_success/jj);
         jj = jj+1;
 
@@ -114,8 +163,17 @@ for ii = N_experiments
     % save intermediate reuslts 
     dtable1 = struct2table(dstruct);
     save([results_name '_' num2str(ii)],"dtable1");
+    save([results_name '_lpec_details_' num2str(ii)],"lpec_dstruct");
+
     % pause(90); % cool down cpu pause
+    cpu_current_exp = toc(t_current_exp);
+    timing_str = sprintf(' - execution time: %.2f seconds (%.4f hours, %.6f days) \n', cpu_current_exp, cpu_current_exp/3600, cpu_current_exp/86400);
+    combined = strcat(name, timing_str);
+    fid = fopen('cpu_experiments.txt', 'a');
+    fprintf(fid, '%s\n', combined);
+    fclose(fid);
 end
 %% Check results and plot
 dtable = struct2table(dstruct);
 save(results_name,"dtable");
+save([results_name '_lpec_details'],"lpec_dstruct");

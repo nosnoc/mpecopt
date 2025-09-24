@@ -1,8 +1,8 @@
-function [] = print_iter_summary_scholtes(f,h_std,h_comp,solver_message,multiplier_based_stationarity,b_stationarity,n_biactive,f_lpec,rho_TR)
+function [] = print_iter_summary_minlp(f,h_std,h_comp,solver_message,multiplier_based_stationarity,b_stationarity,n_biactive,f_lpec,rho_TR)
 
 print_iter_line()
 fprintf('\n');
-fprintf('MPEC homotopy optimizer:\t %s\n',solver_message);
+fprintf('MPEC MINLP reformulation optimizer:\t %s\n',solver_message);
 fprintf('Objective....................:\t %2.6e\n',f);
 fprintf('Std. constraint violation....:\t %2.6e\n',h_std);
 fprintf('Complementarity residual.....:\t %2.6e\n',h_comp);

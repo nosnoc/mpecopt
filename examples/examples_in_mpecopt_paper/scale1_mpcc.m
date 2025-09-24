@@ -1,6 +1,7 @@
 clear; clc; close all
-
-%% Very good example where global optimum leads to more iterations, and reduced lpec is useful!
+nice_plot_colors
+latexify_plot();
+%% Example where global optimum leads to more iterations, and reduced lpec is useful!
 % Example  MPCC * requires a large penalty parametres
 import casadi.*
 a = 10;
@@ -44,7 +45,7 @@ solver_settings.plot_lpec_iterate = 1;
 
 
 solver_initalization = struct('x0', x0, 'lbx',lbx, 'ubx',ubx,'lbg',lbg, 'ubg',ubg);
-[result_active_set,stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
+[result_active_set, stats_active_set] = mpec_optimizer(mpec, solver_initalization, solver_settings);
 w_opt_active_set = full(result_active_set.x);
 f_opt_active_set = full(result_active_set.f);
 fprintf('solution is (%2.4f,%2.4f) \n',w_opt_active_set(1),w_opt_active_set(2));
@@ -61,48 +62,7 @@ fprintf('\n');
 fprintf(' || w_homotopy - w_active_set || = %2.2e \n',norm(w_opt_homotopy-w_opt_active_set));
 
 %%
-nice_plot_colors
-tt = 0:1:5;
 figure
-plot(tt,tt*0,'k','LineWidth',1.5);
-hold on
-grid on
-plot(tt*0,tt,'k','LineWidth',1.5);
-axis equal
-plot(stats_active_set.iter.X_outer(1,:),stats_active_set.iter.X_outer(2,:),'rs')
-plot(stats_active_set.iter.X_lpec(1,:),stats_active_set.iter.X_lpec(2,:),'bd')
-
-
-if 1
-    for i = 1:size(stats_active_set.iter.X_outer,2)-1
-        quiver(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i), stats_active_set.iter.X_outer(1,i+1)-stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i+1)-stats_active_set.iter.X_outer(2,i), 1, 'Color',matlab_red,'LineWidth',2);
-        text(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i),num2str(i));
-    end
-else
-    for i = 1:size(stats_active_set.iter.X_outer,2)-1
-        quiver(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i), -2*(a*stats_active_set.iter.X_outer(1,i)-1),-2*(stats_active_set.iter.X_outer(2,i)-1), 0.5, 'Color',matlab_red,'LineWidth',2);
-        text(stats_active_set.iter.X_outer(1,i), stats_active_set.iter.X_outer(2,i),num2str(i));
-    end
-end
-xlim([-1 5])
-ylim([-1 5])
-
-f = @(x,y) (a*x-1).^2+(y-1).^2;
-% Generate grid points for x and y
-x = linspace(-1, 5, 50);
-y = linspace(-1, 5, 50);
-% Create a grid of points
-[X, Y] = meshgrid(x, y);
-% Evaluate the function at each point in the grid
-Z = f(X, Y);
-% Plot the contour lines
-contour(X, Y, Z, 30);
-xlabel('x');
-ylabel('y');
-%%
-
-figure
-latexify_plot()
 a = 4;
 filename = 'lpec_small_rho1.pdf';
 linewidht = 2;
