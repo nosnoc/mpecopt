@@ -40,10 +40,12 @@ function [ind_scalar,ind_nonscalar, ind_map] = find_nonscalar(g,w,p)
     sub = sp.find;
     [ind_g1, ind_g2] = ind2sub(size(ind_g_fun(w,p)),sub);
     % transpose because groupcounts expects column vector
-    c=groupcounts(ind_g1');
-    ind_scalar=ind_g1(find(c==1));
+    [cu,ia,ic]=unique(ind_g1,"stable");
+    [c,cg]=groupcounts(ind_g1');
+    all_nonscalar = cg(find(c==1));
+    [ind_scalar,icu,icg]=intersect(ind_g1,all_nonscalar,"stable");
     % transpose so 0x1 vectors are correctly handled externally
-    ind_map = ind_g2(find(ismember(ind_scalar,ind_g1)));
+    ind_map = ind_g2(icu);
 
     % HERE BE MORE DRAGONS:
     % We also need to check for constant offsets. In future we may want to capture the offset in lbw but for now just assume nonscalar
