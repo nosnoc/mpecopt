@@ -89,7 +89,7 @@ If you use this code or refer to the method in your research, please use the fol
 @article{Nurkanovic2025, 
   title={[A Globally Convergent Method for Computing B-stationary Points of Mathematical Programs with Equilibrium Constraints},
   author={Nurkanovi{\'c}, Armin and Leyffer, Sven}, 
-  journal={arXiv preprint },
+  journal={arXiv preprint arXiv:2501.13835},
   year={2025}
 }
 ```
